@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Producto</title>
+
+    <style>
+        body {
+            background: #111;
+            color: white;
+            font-family: Arial;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        form {
+            background: #1b1b1b;
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            background: #b30000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<form method="POST">
+    <h2>Editar Producto</h2>
+
+    <input type="text" name="nombre" value="{{ producto.nombre }}">
+    <input type="text" name="marca" value="{{ producto.marca }}">
+    <input type="text" name="modelo" value="{{ producto.modelo }}">
+    <input type="number" name="anio" value="{{ producto.anio }}">
+    <input type="number" name="precio" value="{{ producto.precio }}">
+
+    <button type="submit">Guardar cambios</button>
+</form>
+
+</body>
+</html>

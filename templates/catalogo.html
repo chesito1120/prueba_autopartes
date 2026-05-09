@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Catálogo de Autopartes</title>
+
+    <!-- =========================
+         PWA CONFIG
+    ========================== -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#b30000">
+
+    <!-- ICONO APP (opcional pero recomendado) -->
+    <link rel="icon" href="/static/icons/icon-192.png">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #111;
+            color: white;
+        }
+
+        header {
+            background: linear-gradient(90deg, #111, #b30000);
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 36px;
+        }
+
+        header p {
+            color: #ddd;
+            margin-top: 8px;
+        }
+
+        .login-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: #222;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #444;
+        }
+
+        .buscador {
+            width: 60%;
+            display: block;
+            margin: 25px auto;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .contenedor {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .producto {
+            background: #1b1b1b;
+            width: 300px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .producto img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+
+        .info {
+            padding: 20px;
+        }
+
+        .info h3 {
+            color: #ff3333;
+        }
+
+        .info p {
+            margin: 8px 0;
+            color: #ddd;
+        }
+
+        .precio {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .disponible {
+            color: #00cc66;
+            font-weight: bold;
+        }
+
+        .agotado {
+            color: #ff3333;
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>CATÁLOGO DE AUTOPARTES</h1>
+    <p>Refacciones disponibles</p>
+
+    <a href="/login" class="login-btn">Admin</a>
+</header>
+
+<input
+    type="text"
+    id="buscador"
+    class="buscador"
+    placeholder="Buscar por nombre, marca o modelo..."
+    onkeyup="buscarProducto()"
+>
+
+<div class="contenedor" id="contenedorProductos">
+
+{% for producto in productos %}
+<div class="producto">
+
+    <img src="{{ url_for('static', filename='uploads/' + producto.imagen) }}">
+
+    <div class="info">
+
+        <h3>{{ producto.nombre }}</h3>
+
+        <p>{{ producto.marca }}</p>
+        <p>{{ producto.modelo }}</p>
+        <p>{{ producto.anio }}</p>
+
+        <div class="precio">${{ producto.precio }}</div>
+
+        {% if producto.stock > 0 %}
+    <p class="disponible">
+        ● Disponible ({{ producto.stock }} en stock)
+    </p>
+
+            <a href="https://wa.me/521XXXXXXXXXX?text=Hola,%20me%20interesa%20{{ producto.nombre }}" target="_blank">
+                <button class="btn btn-whatsapp">Consultar por WhatsApp</button>
+            </a>
+
+        {% else %}
+            <p class="agotado">● Agotado</p>
+        {% endif %}
+
+    </div>
+</div>
+{% endfor %}
+
+</div>
+
+
+
+
+<!-- =========================
+     BUSCADOR
+========================== -->
+<script>
+function buscarProducto() {
+    let input = document.getElementById('buscador').value.toLowerCase();
+    let productos = document.getElementsByClassName('producto');
+
+    for (let i = 0; i < productos.length; i++) {
+        let texto = productos[i].innerText.toLowerCase();
+
+        productos[i].style.display = texto.includes(input) ? "" : "none";
+    }
+}
+</script>
+
+<!-- =========================
+     SERVICE WORKER (PWA)
+========================== -->
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/service-worker.js')
+    .then(() => {
+        console.log("PWA: Service Worker registrado");
+    })
+    .catch(err => console.log("Error SW:", err));
+}
+</script>
+
+</body>
+</html>
