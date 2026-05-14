@@ -7,9 +7,22 @@ app = Flask(__name__)
 # =========================
 # CONFIG
 # =========================
-app.secret_key = 'autopartes_secret'
+app.secret_key = os.environ.get("SECRET_KEY", "autopartes_secret")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
+# Detectar entorno Railway o local
+if os.environ.get("MYSQLHOST"):
+    DB_USER = os.getenv("MYSQLUSER")
+    DB_PASSWORD = os.getenv("MYSQLPASSWORD")
+    DB_HOST = os.getenv("MYSQLHOST")
+    DB_PORT = os.getenv("MYSQLPORT")
+    DB_NAME = os.getenv("MYSQLDATABASE")
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
@@ -20,7 +33,6 @@ db = SQLAlchemy(app)
 # =========================
 USUARIO_ADMIN = "admin"
 PASSWORD_ADMIN = "123456"
-
 
 # =========================
 # MODELO
@@ -165,7 +177,7 @@ def restar_stock(id):
 
 
 # =========================
-# 🔥 AGOTAR (ESTE ERA TU ERROR)
+# AGOTAR
 # =========================
 @app.route('/agotado/<int:id>')
 def marcar_agotado(id):
@@ -180,7 +192,7 @@ def marcar_agotado(id):
 
 
 # =========================
-# ACTIVAR PRODUCTO
+# ACTIVAR
 # =========================
 @app.route('/disponible/<int:id>')
 def marcar_disponible(id):
@@ -212,8 +224,9 @@ def eliminar(id):
 # =========================
 # RUN
 # =========================
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    db.create_all()
 
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
