@@ -11,8 +11,14 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
 DATABASE_URL = os.getenv("MYSQL_URL")
 
-if DATABASE_URL:
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+if os.getenv("MYSQLHOST"):
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f"mysql+pymysql://{os.getenv('MYSQLUSER')}:"
+        f"{os.getenv('MYSQLPASSWORD')}@"
+        f"{os.getenv('MYSQLHOST')}:"
+        f"{os.getenv('MYSQLPORT')}/"
+        f"{os.getenv('MYSQLDATABASE')}"
+    )
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
 
