@@ -6,22 +6,26 @@ app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
-DATABASE_URL = (
-    os.getenv("MYSQL_URL")
-    or os.getenv("MYSQL_PUBLIC_URL")
-    or ""
-).strip()
+DB_USER = os.getenv("MYSQLUSER")
+DB_PASSWORD = os.getenv("MYSQLPASSWORD")
+DB_HOST = os.getenv("MYSQLHOST")
+DB_PORT = os.getenv("MYSQLPORT")
+DB_NAME = os.getenv("MYSQLDATABASE")
 
-if DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = (
+    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 
+print("USER:", DB_USER)
+print("HOST:", DB_HOST)
+print("PORT:", DB_PORT)
+print("DB:", DB_NAME)
+
 db = SQLAlchemy(app)
+
 # =========================
 # ADMIN
 # =========================
