@@ -4,18 +4,16 @@ import os
 
 app = Flask(__name__)
 
-# =========================
-# CONFIG
-# =========================
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
-DATABASE_URL = os.getenv("MYSQL_URL")
+DATABASE_URL = (
+    os.getenv("MYSQL_URL")
+    or os.getenv("MYSQL_PUBLIC_URL")
+    or ""
+).strip()
 
 if DATABASE_URL:
-    # Railway a veces usa mysql://
-    if DATABASE_URL.startswith("mysql://"):
-        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-
+    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 else:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes.db"
@@ -24,7 +22,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 
 db = SQLAlchemy(app)
-
 # =========================
 # ADMIN
 # =========================
