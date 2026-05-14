@@ -7,19 +7,12 @@ app = Flask(__name__)
 # =========================
 # CONFIG
 # =========================
-app.secret_key = os.environ.get("SECRET_KEY", "autopartes_secret")
+app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
-# Detectar entorno Railway o local
-if os.environ.get("MYSQLHOST"):
-    DB_USER = os.getenv("MYSQLUSER")
-    DB_PASSWORD = os.getenv("MYSQLPASSWORD")
-    DB_HOST = os.getenv("MYSQLHOST")
-    DB_PORT = os.getenv("MYSQLPORT")
-    DB_NAME = os.getenv("MYSQLDATABASE")
+DATABASE_URL = os.getenv("MYSQL_URL")
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
+if DATABASE_URL:
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
 
@@ -33,6 +26,7 @@ db = SQLAlchemy(app)
 # =========================
 USUARIO_ADMIN = "admin"
 PASSWORD_ADMIN = "123456"
+
 
 # =========================
 # MODELO
@@ -63,7 +57,10 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form['usuario'] == USUARIO_ADMIN and request.form['password'] == PASSWORD_ADMIN:
+        if (
+            request.form['usuario'] == USUARIO_ADMIN
+            and request.form['password'] == PASSWORD_ADMIN
+        ):
             session['admin'] = True
             return redirect('/admin')
 
@@ -77,7 +74,7 @@ def logout():
 
 
 # =========================
-# ADMIN PANEL
+# PANEL ADMIN
 # =========================
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -87,6 +84,9 @@ def admin():
     if request.method == 'POST':
         archivo = request.files['imagen']
         nombre_archivo = archivo.filename
+
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
 
         ruta = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
         archivo.save(ruta)
@@ -215,18 +215,23 @@ def eliminar(id):
         return redirect('/login')
 
     producto = Producto.query.get_or_404(id)
-    db.session.delete(producto)
 
+    db.session.delete(producto)
     db.session.commit()
+
     return redirect('/admin')
+
+
+# =========================
+# INIT DB
+# =========================
+with app.app_context():
+    db.create_all()
 
 
 # =========================
 # RUN
 # =========================
-with app.app_context():
-    db.create_all()
-
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.getenv("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
