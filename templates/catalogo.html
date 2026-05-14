@@ -1,17 +1,10 @@
-<!DOCTYPE html>
-<html lang="es">
 <head>
     <meta charset="UTF-8">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo de Autopartes</title>
 
-    <!-- =========================
-         PWA CONFIG
-    ========================== -->
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#b30000">
-
-    <!-- ICONO APP (opcional pero recomendado) -->
     <link rel="icon" href="/static/icons/icon-192.png">
 
     <style>
@@ -71,16 +64,17 @@
         }
 
         .contenedor {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 30px;
             padding: 30px;
+            max-width: 1400px;
+            margin: auto;
         }
 
         .producto {
             background: #1b1b1b;
-            width: 300px;
+            width: 100%;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4);
@@ -141,93 +135,52 @@
             padding: 20px;
             color: #777;
         }
+
+        /* TABLET */
+        @media (max-width: 1024px) {
+            .contenedor {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .buscador {
+                width: 85%;
+            }
+        }
+
+        /* CELULAR */
+        @media (max-width: 768px) {
+            header {
+                padding: 20px 15px 70px;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            .login-btn {
+                position: static;
+                display: inline-block;
+                margin-top: 15px;
+            }
+
+            .buscador {
+                width: 92%;
+                font-size: 15px;
+            }
+
+            .contenedor {
+                grid-template-columns: 1fr;
+                padding: 15px;
+                gap: 20px;
+            }
+
+            .producto img {
+                height: 200px;
+            }
+
+            .precio {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
-
-<body>
-
-<header>
-    <h1>CATÁLOGO DE AUTOPARTES</h1>
-    <p>Refacciones disponibles</p>
-
-    <a href="/login" class="login-btn">Admin</a>
-</header>
-
-<input
-    type="text"
-    id="buscador"
-    class="buscador"
-    placeholder="Buscar por nombre, marca o modelo..."
-    onkeyup="buscarProducto()"
->
-
-<div class="contenedor" id="contenedorProductos">
-
-{% for producto in productos %}
-<div class="producto">
-
-    <img src="{{ url_for('static', filename='uploads/' + producto.imagen) }}">
-
-    <div class="info">
-
-        <h3>{{ producto.nombre }}</h3>
-
-        <p>{{ producto.marca }}</p>
-        <p>{{ producto.modelo }}</p>
-        <p>{{ producto.anio }}</p>
-
-        <div class="precio">${{ producto.precio }}</div>
-
-        {% if producto.stock > 0 %}
-    <p class="disponible">
-        ● Disponible ({{ producto.stock }} en stock)
-    </p>
-
-            <a href="https://wa.me/521XXXXXXXXXX?text=Hola,%20me%20interesa%20{{ producto.nombre }}" target="_blank">
-                <button class="btn btn-whatsapp">Consultar por WhatsApp</button>
-            </a>
-
-        {% else %}
-            <p class="agotado">● Agotado</p>
-        {% endif %}
-
-    </div>
-</div>
-{% endfor %}
-
-</div>
-
-
-
-
-<!-- =========================
-     BUSCADOR
-========================== -->
-<script>
-function buscarProducto() {
-    let input = document.getElementById('buscador').value.toLowerCase();
-    let productos = document.getElementsByClassName('producto');
-
-    for (let i = 0; i < productos.length; i++) {
-        let texto = productos[i].innerText.toLowerCase();
-
-        productos[i].style.display = texto.includes(input) ? "" : "none";
-    }
-}
-</script>
-
-<!-- =========================
-     SERVICE WORKER (PWA)
-========================== -->
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/service-worker.js')
-    .then(() => {
-        console.log("PWA: Service Worker registrado");
-    })
-    .catch(err => console.log("Error SW:", err));
-}
-</script>
-
-</body>
-</html>
