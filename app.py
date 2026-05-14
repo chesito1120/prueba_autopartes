@@ -15,15 +15,24 @@ DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
-if DB_HOST:
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
+# Railway o local
+if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+    DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
+    DATABASE_URI = "mysql+pymysql://root:@localhost/autopartes"
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["UPLOAD_FOLDER"] = "static/uploads"
+
+# DEBUG (quítalo cuando funcione)
+print("===== VARIABLES MYSQL =====")
+print("MYSQLHOST:", DB_HOST)
+print("MYSQLUSER:", DB_USER)
+print("MYSQLPORT:", DB_PORT)
+print("MYSQLDATABASE:", DB_NAME)
+print("DATABASE_URI:", DATABASE_URI)
+print("===========================")
 
 db = SQLAlchemy(app)
 
@@ -91,8 +100,7 @@ def admin():
         archivo = request.files['imagen']
         nombre_archivo = archivo.filename
 
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
         ruta = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
         archivo.save(ruta)
@@ -151,7 +159,7 @@ def editar(id):
 
 
 # =========================
-# STOCK +1
+# STOCK
 # =========================
 @app.route('/sumar/<int:id>')
 def sumar_stock(id):
@@ -161,9 +169,6 @@ def sumar_stock(id):
     return redirect('/admin')
 
 
-# =========================
-# STOCK -1
-# =========================
 @app.route('/restar/<int:id>')
 def restar_stock(id):
     producto = Producto.query.get_or_404(id)
@@ -175,9 +180,6 @@ def restar_stock(id):
     return redirect('/admin')
 
 
-# =========================
-# AGOTAR
-# =========================
 @app.route('/agotado/<int:id>')
 def marcar_agotado(id):
     producto = Producto.query.get_or_404(id)
@@ -186,9 +188,6 @@ def marcar_agotado(id):
     return redirect('/admin')
 
 
-# =========================
-# ACTIVAR
-# =========================
 @app.route('/disponible/<int:id>')
 def marcar_disponible(id):
     producto = Producto.query.get_or_404(id)
