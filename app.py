@@ -9,15 +9,15 @@ app = Flask(__name__)
 # =========================
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
-DATABASE_URL = os.getenv("MYSQL_URL")
+DB_USER = os.getenv("MYSQLUSER")
+DB_PASSWORD = os.getenv("MYSQLPASSWORD")
+DB_HOST = os.getenv("MYSQLHOST")
+DB_PORT = os.getenv("MYSQLPORT")
+DB_NAME = os.getenv("MYSQLDATABASE")
 
-if os.getenv("MYSQLHOST"):
+if DB_HOST:
     app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"mysql+pymysql://{os.getenv('MYSQLUSER')}:"
-        f"{os.getenv('MYSQLPASSWORD')}@"
-        f"{os.getenv('MYSQLHOST')}:"
-        f"{os.getenv('MYSQLPORT')}/"
-        f"{os.getenv('MYSQLDATABASE')}"
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
@@ -25,7 +25,6 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
-# ESTA LÍNEA DEBE IR AQUÍ
 db = SQLAlchemy(app)
 
 # =========================
