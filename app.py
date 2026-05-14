@@ -9,21 +9,18 @@ app = Flask(__name__)
 # =========================
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
-if os.getenv("MYSQLHOST"):
-    DB_USER = os.getenv("MYSQLUSER")
-    DB_PASSWORD = os.getenv("MYSQLPASSWORD")
-    DB_HOST = os.getenv("MYSQLHOST")
-    DB_PORT = os.getenv("MYSQLPORT")
-    DB_NAME = os.getenv("MYSQLDATABASE")
+DATABASE_URL = os.getenv("MYSQL_URL")
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
+if DATABASE_URL:
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/autopartes'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+
+# ESTA LÍNEA DEBE IR AQUÍ
+db = SQLAlchemy(app)
 
 # =========================
 # ADMIN
@@ -62,8 +59,8 @@ def home():
 def login():
     if request.method == 'POST':
         if (
-            request.form['usuario'] == USUARIO_ADMIN
-            and request.form['password'] == PASSWORD_ADMIN
+            request.form['usuario'] == USUARIO_ADMIN and
+            request.form['password'] == PASSWORD_ADMIN
         ):
             session['admin'] = True
             return redirect('/admin')
@@ -153,12 +150,8 @@ def editar(id):
 # =========================
 @app.route('/sumar/<int:id>')
 def sumar_stock(id):
-    if not session.get('admin'):
-        return redirect('/login')
-
     producto = Producto.query.get_or_404(id)
     producto.stock += 1
-
     db.session.commit()
     return redirect('/admin')
 
@@ -168,9 +161,6 @@ def sumar_stock(id):
 # =========================
 @app.route('/restar/<int:id>')
 def restar_stock(id):
-    if not session.get('admin'):
-        return redirect('/login')
-
     producto = Producto.query.get_or_404(id)
 
     if producto.stock > 0:
@@ -185,12 +175,8 @@ def restar_stock(id):
 # =========================
 @app.route('/agotado/<int:id>')
 def marcar_agotado(id):
-    if not session.get('admin'):
-        return redirect('/login')
-
     producto = Producto.query.get_or_404(id)
     producto.stock = 0
-
     db.session.commit()
     return redirect('/admin')
 
@@ -200,12 +186,8 @@ def marcar_agotado(id):
 # =========================
 @app.route('/disponible/<int:id>')
 def marcar_disponible(id):
-    if not session.get('admin'):
-        return redirect('/login')
-
     producto = Producto.query.get_or_404(id)
     producto.stock = 1
-
     db.session.commit()
     return redirect('/admin')
 
@@ -215,14 +197,9 @@ def marcar_disponible(id):
 # =========================
 @app.route('/eliminar/<int:id>')
 def eliminar(id):
-    if not session.get('admin'):
-        return redirect('/login')
-
     producto = Producto.query.get_or_404(id)
-
     db.session.delete(producto)
     db.session.commit()
-
     return redirect('/admin')
 
 
