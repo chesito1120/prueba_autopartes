@@ -1,0 +1,232 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Dashboard
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .dashboard-header {
+        margin-bottom: 30px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 36px;
+        color: #ffffff;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+        color: #9ca3af;
+        font-size: 15px;
+    }
+
+    .dashboard-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin-bottom: 35px;
+    }
+
+    .dashboard-card-box {
+        background: #ffffff;
+        color: #111827;
+        border-radius: 12px;
+        padding: 22px;
+        min-height: 130px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        border-top: 5px solid #2563eb;
+    }
+
+    .dashboard-card-box span {
+        display: block;
+        color: #4b5563;
+        font-size: 14px;
+        margin-bottom: 12px;
+        font-weight: bold;
+    }
+
+    .dashboard-card-box h2 {
+        font-size: 34px;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-card-box p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .card-green {
+        border-top-color: #16a34a;
+    }
+
+    .card-red {
+        border-top-color: #dc2626;
+    }
+
+    .card-yellow {
+        border-top-color: #f59e0b;
+    }
+
+    .card-purple {
+        border-top-color: #7c3aed;
+    }
+
+    .card-cyan {
+        border-top-color: #0891b2;
+    }
+
+    .card-orange {
+        border-top-color: #ea580c;
+    }
+
+    .card-gray {
+        border-top-color: #64748b;
+    }
+
+    .dashboard-table-box {
+        background: #ffffff;
+        color: #111827;
+        border-radius: 12px;
+        padding: 22px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        overflow-x: auto;
+    }
+
+    .dashboard-table-box h2 {
+        margin-bottom: 15px;
+        color: #111827;
+    }
+
+    .dashboard-table-box table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 700px;
+    }
+
+    .dashboard-table-box th {
+        background: #e5e7eb;
+        color: #111827;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .dashboard-table-box td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #111827;
+    }
+
+    @media (max-width: 1200px) {
+        .dashboard-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+        }
+    }
+</style>
+
+<div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <p>Resumen general del inventario, ventas, préstamos y adeudos.</p>
+</div>
+
+<div class="dashboard-cards">
+
+    <div class="dashboard-card-box">
+        <span>Total inventario</span>
+        <h2>{{ total }}</h2>
+        <p>Piezas registradas</p>
+    </div>
+
+    <div class="dashboard-card-box card-green">
+        <span>Disponibles</span>
+        <h2>{{ disponibles }}</h2>
+        <p>Piezas en existencia</p>
+    </div>
+
+    <div class="dashboard-card-box card-red">
+        <span>Agotadas</span>
+        <h2>{{ agotados }}</h2>
+        <p>Sin stock</p>
+    </div>
+
+    <div class="dashboard-card-box card-yellow">
+        <span>Valor inventario</span>
+        <h2>${{ valor_total }}</h2>
+        <p>Valor aproximado</p>
+    </div>
+
+    <div class="dashboard-card-box card-purple">
+        <span>Vendidas</span>
+        <h2>{{ vendidas }}</h2>
+        <p>Piezas vendidas</p>
+    </div>
+
+    <div class="dashboard-card-box card-cyan">
+        <span>Prestadas</span>
+        <h2>{{ prestadas }}</h2>
+        <p>Piezas prestadas</p>
+    </div>
+
+    <div class="dashboard-card-box card-orange">
+        <span>A crédito</span>
+        <h2>{{ credito }}</h2>
+        <p>Pendientes de pago</p>
+    </div>
+
+    <div class="dashboard-card-box card-gray">
+        <span>Facturadas</span>
+        <h2>{{ facturadas }}</h2>
+        <p>Con factura registrada</p>
+    </div>
+
+</div>
+
+<div class="dashboard-table-box">
+    <h2>Resumen rápido</h2>
+
+    <table>
+        <tr>
+            <th>Concepto</th>
+            <th>Cantidad</th>
+            <th>Descripción</th>
+        </tr>
+
+        <tr>
+            <td>Inventario total</td>
+            <td>{{ total }}</td>
+            <td>Total de piezas registradas en el sistema</td>
+        </tr>
+
+        <tr>
+            <td>Disponibles</td>
+            <td>{{ disponibles }}</td>
+            <td>Piezas listas para venta</td>
+        </tr>
+
+        <tr>
+            <td>Prestadas</td>
+            <td>{{ prestadas }}</td>
+            <td>Piezas entregadas como préstamo</td>
+        </tr>
+
+        <tr>
+            <td>A crédito</td>
+            <td>{{ credito }}</td>
+            <td>Piezas vendidas pendientes de pago</td>
+        </tr>
+    </table>
+</div>
+
+{% endblock %}

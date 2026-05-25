@@ -1,10 +1,12 @@
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo de Autopartes</title>
 
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#b30000">
+    <meta name="theme-color" content="#0f172a">
     <link rel="icon" href="/static/icons/icon-192.png">
 
     <style>
@@ -16,171 +18,572 @@
         }
 
         body {
-            background: #111;
-            color: white;
+            background: #d1d5db;
+            color: #111827;
         }
 
         header {
-            background: linear-gradient(90deg, #111, #b30000);
-            padding: 25px;
+            background: linear-gradient(90deg, #111827, #0ea5e9);
+            color: white;
+            padding: 35px 25px;
             text-align: center;
             position: relative;
         }
 
         header h1 {
             font-size: 36px;
+            letter-spacing: 1px;
         }
 
         header p {
-            color: #ddd;
             margin-top: 8px;
+            color: #d1d5db;
         }
 
         .login-btn {
             position: absolute;
             top: 25px;
             right: 25px;
-            background: #222;
+            background: #0ea5e9;
             color: white;
             padding: 10px 18px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: bold;
-            transition: 0.3s;
         }
 
-        .login-btn:hover {
-            background: #444;
+        .buscador-box {
+            background: #e5e7eb;
+            padding: 22px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
         }
 
         .buscador {
-            width: 60%;
+            width: 80%;
+            max-width: 900px;
             display: block;
-            margin: 25px auto;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
+            margin: auto;
+            padding: 15px;
+            border: 1px solid #9ca3af;
+            border-radius: 10px;
             font-size: 16px;
+            background: white;
         }
 
         .contenedor {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            padding: 30px;
+            gap: 26px;
+            padding: 35px;
             max-width: 1400px;
             margin: auto;
         }
 
         .producto {
-            background: #1b1b1b;
-            width: 100%;
-            border-radius: 15px;
+            background: #e5e7eb;
+            border: 1px solid #9ca3af;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            transition: 0.25s;
+            display: flex;
+            flex-direction: column;
         }
 
-        .producto img {
+        .producto:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+        }
+
+        .imagen-box {
+            height: 260px;
+            background: #d1d5db;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 18px;
+        }
+
+        .imagen-box img {
+            max-width: 100%;
+            max-height: 230px;
+            object-fit: contain;
+        }
+
+        .sin-foto {
             width: 100%;
             height: 220px;
-            object-fit: cover;
+            background: #cbd5e1;
+            color: #6b7280;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border-radius: 8px;
         }
 
         .info {
-            padding: 20px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
 
         .info h3 {
-            color: #ff3333;
+            font-size: 21px;
+            line-height: 1.25;
+            font-weight: 500;
+            margin-bottom: 18px;
+            color: #111827;
+            text-transform: uppercase;
+            min-height: 78px;
         }
 
-        .info p {
-            margin: 8px 0;
-            color: #ddd;
+        .tag {
+            display: inline-block;
+            width: fit-content;
+            background: #dcfce7;
+            color: #166534;
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+
+        .tag-agotado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .detalle {
+            color: #374151;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .detalle strong {
+            color: #111827;
+        }
+
+        .codigo {
+            margin-top: 14px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .codigo span {
+            color: #ea580c;
+            font-weight: bold;
         }
 
         .precio {
-            font-size: 24px;
+            font-size: 27px;
             font-weight: bold;
-            margin: 15px 0;
+            color: #1f2937;
+            margin: 18px 0 4px;
         }
 
-        .disponible {
-            color: #00cc66;
-            font-weight: bold;
+        .iva {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 14px;
         }
 
-        .agotado {
-            color: #ff3333;
-            font-weight: bold;
+        .stock {
+            color: #374151;
+            font-size: 15px;
+            margin-bottom: 15px;
+        }
+
+        .acciones-card {
+            margin-top: auto;
         }
 
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 13px;
             margin-top: 10px;
             border: none;
-            border-radius: 8px;
+            border-radius: 999px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 15px;
         }
 
         .btn-whatsapp {
-            background: #25D366;
+            background: #111827;
             color: white;
+        }
+
+        .btn-ml {
+            background: #ffe600;
+            color: #111827;
+        }
+
+        .btn:hover {
+            opacity: 0.92;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .paginacion {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px auto 35px;
+            padding: 18px;
+        }
+
+        .paginacion a,
+        .paginacion span {
+            background: #e5e7eb;
+            color: #111827;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid #9ca3af;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .paginacion a:hover {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .paginacion .activo {
+            background: #ea580c;
+            color: white;
+            border-color: #ea580c;
         }
 
         footer {
             text-align: center;
-            padding: 20px;
-            color: #777;
+            padding: 25px;
+            color: #374151;
         }
 
-        /* TABLET */
-        @media (max-width: 1024px) {
+        @media (max-width: 1100px) {
             .contenedor {
                 grid-template-columns: repeat(2, 1fr);
             }
 
             .buscador {
-                width: 85%;
+                width: 90%;
             }
         }
 
-        /* CELULAR */
         @media (max-width: 768px) {
             header {
-                padding: 20px 15px 70px;
+                padding: 25px 15px 80px;
             }
 
             header h1 {
-                font-size: 24px;
+                font-size: 26px;
             }
 
             .login-btn {
                 position: static;
                 display: inline-block;
-                margin-top: 15px;
-            }
-
-            .buscador {
-                width: 92%;
-                font-size: 15px;
+                margin-top: 18px;
             }
 
             .contenedor {
                 grid-template-columns: 1fr;
-                padding: 15px;
-                gap: 20px;
+                padding: 18px;
             }
 
-            .producto img {
-                height: 200px;
+            .imagen-box {
+                height: 230px;
             }
 
-            .precio {
-                font-size: 20px;
+            .info h3 {
+                min-height: auto;
+                font-size: 19px;
+            }
+
+            .buscador {
+                width: 100%;
             }
         }
     </style>
 </head>
+
+<body>
+
+<header>
+
+    <h1>CATÁLOGO DE AUTOPARTES</h1>
+
+    <p>Refacciones disponibles para venta</p>
+
+    <a href="/login" class="login-btn">
+        Admin
+    </a>
+
+</header>
+
+<div class="buscador-box">
+
+    <input
+        type="text"
+        id="buscador"
+        class="buscador"
+        placeholder="Buscar por autoparte, marca, modelo, año..."
+        onkeyup="buscarProducto()"
+    >
+
+</div>
+
+<div class="contenedor" id="contenedorProductos">
+
+{% for producto in productos %}
+
+<div class="producto">
+
+    <div class="imagen-box">
+
+        {% if producto.foto %}
+
+            <img
+                src="{{ url_for('static', filename='uploads/' ~ producto.foto) }}"
+                alt="{{ producto.autoparte }}"
+            >
+
+        {% else %}
+
+            <div class="sin-foto">
+                Sin foto
+            </div>
+
+        {% endif %}
+
+    </div>
+
+    <div class="info">
+
+        <h3>
+            {{ producto.autoparte or 'Autoparte sin nombre' }}
+
+            {% if producto.marca %}
+                {{ producto.marca }}
+            {% endif %}
+
+            {% if producto.modelo %}
+                {{ producto.modelo }}
+            {% endif %}
+
+            {% if producto.anio %}
+                {{ producto.anio }}
+            {% endif %}
+        </h3>
+
+        {% if producto.stock > 0 %}
+            <span class="tag">
+                Nuevo / Disponible
+            </span>
+        {% else %}
+            <span class="tag tag-agotado">
+                Sin existencia
+            </span>
+        {% endif %}
+
+        <p class="detalle">
+            <strong>Marca:</strong>
+            {{ producto.marca or '-' }}
+        </p>
+
+        <p class="detalle">
+            <strong>Modelo:</strong>
+            {{ producto.modelo or '-' }}
+        </p>
+
+        <p class="detalle">
+            <strong>Año:</strong>
+            {{ producto.anio or '-' }}
+        </p>
+
+        {% if producto.motor %}
+        <p class="detalle">
+            <strong>Motor:</strong>
+            {{ producto.motor }}
+        </p>
+        {% endif %}
+
+        {% if producto.transmision %}
+        <p class="detalle">
+            <strong>Transmisión:</strong>
+            {{ producto.transmision }}
+        </p>
+        {% endif %}
+
+        {% if producto.lado %}
+        <p class="detalle">
+            <strong>Lado:</strong>
+            {{ producto.lado }}
+        </p>
+        {% endif %}
+
+        {% if producto.origen %}
+        <p class="detalle">
+            <strong>Origen:</strong>
+            {{ producto.origen }}
+        </p>
+        {% endif %}
+
+        <p class="codigo">
+            Código interno:
+            <span>{{ producto.id }}</span>
+        </p>
+
+        <div class="precio">
+            ${{ producto.costo_venta or 0 }}
+        </div>
+
+        <div class="iva">
+            Precio de referencia
+        </div>
+
+        {% if producto.stock > 0 %}
+            <p class="stock">
+                En existencia: {{ producto.stock }}
+            </p>
+        {% else %}
+            <p class="stock">
+                Sin existencia
+            </p>
+        {% endif %}
+
+        <div class="acciones-card">
+
+            {% if producto.stock > 0 %}
+
+                <a
+                    href="https://wa.me/523314184246?text=Hola,%20me%20interesa%20{{ producto.autoparte }}%20{{ producto.marca }}%20{{ producto.modelo }}%20{{ producto.anio }}"
+                    target="_blank"
+                >
+                    <button class="btn btn-whatsapp">
+                        Consultar por WhatsApp
+                    </button>
+                </a>
+
+                {% if producto.link_ml %}
+                    <a href="{{ producto.link_ml }}" target="_blank">
+                        <button class="btn btn-ml">
+                            Ver en Mercado Libre
+                        </button>
+                    </a>
+                {% endif %}
+
+            {% else %}
+
+                {% if producto.link_ml %}
+                    <a href="{{ producto.link_ml }}" target="_blank">
+                        <button class="btn btn-ml">
+                            Ver publicación
+                        </button>
+                    </a>
+                {% endif %}
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+<div class="paginacion">
+
+    {% if paginacion.has_prev %}
+        <a href="/?page={{ paginacion.prev_num }}">«</a>
+    {% else %}
+        <span>«</span>
+    {% endif %}
+
+    {% for page_num in paginacion.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+
+        {% if page_num %}
+
+            {% if page_num == paginacion.page %}
+
+                <a class="activo" href="/?page={{ page_num }}">
+                    {{ page_num }}
+                </a>
+
+            {% else %}
+
+                <a href="/?page={{ page_num }}">
+                    {{ page_num }}
+                </a>
+
+            {% endif %}
+
+        {% else %}
+
+            <span>...</span>
+
+        {% endif %}
+
+    {% endfor %}
+
+    {% if paginacion.has_next %}
+        <a href="/?page={{ paginacion.next_num }}">»</a>
+    {% else %}
+        <span>»</span>
+    {% endif %}
+
+</div>
+
+<footer>
+    Catálogo actualizado automáticamente
+</footer>
+
+<script>
+function buscarProducto() {
+
+    let input =
+        document.getElementById('buscador')
+        .value
+        .toLowerCase();
+
+    let productos =
+        document.getElementsByClassName('producto');
+
+    for (let i = 0; i < productos.length; i++) {
+
+        let texto =
+            productos[i]
+            .innerText
+            .toLowerCase();
+
+        productos[i].style.display =
+            texto.includes(input)
+            ? ""
+            : "none";
+    }
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+
+    navigator.serviceWorker
+    .register('/static/service-worker.js')
+
+    .then(() => {
+        console.log("PWA: Service Worker registrado");
+    })
+
+    .catch(err => console.log("Error SW:", err));
+}
+</script>
+
+</body>
+</html>

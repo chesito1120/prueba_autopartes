@@ -1,0 +1,139 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Préstamos
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .prestamos-header {
+        margin-bottom: 28px;
+    }
+
+    .prestamos-header h1 {
+        font-size: 34px;
+        color: white;
+        margin-bottom: 8px;
+    }
+
+    .prestamos-header p {
+        color: #9ca3af;
+    }
+
+    .prestamos-card {
+        background: white;
+        color: #111827;
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        overflow-x: auto;
+    }
+
+    .prestamos-card h2 {
+        margin-bottom: 18px;
+    }
+
+    .prestamos-card table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1000px;
+    }
+
+    .prestamos-card th {
+        background: #e5e7eb;
+        color: #111827;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .prestamos-card td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #111827;
+    }
+
+    .badge-prestado {
+        background: #e0f2fe;
+        color: #075985;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .btn-devuelto {
+        background: #16a34a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .vacio {
+        background: white;
+        color: #111827;
+        padding: 25px;
+        border-radius: 14px;
+        text-align: center;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+</style>
+
+<div class="prestamos-header">
+    <h1>Préstamos</h1>
+    <p>Control de piezas prestadas, a quién se entregaron y fecha de regreso.</p>
+</div>
+
+{% if prestamos %}
+
+<div class="prestamos-card">
+    <h2>Piezas prestadas</h2>
+
+    <table>
+        <tr>
+            <th>Autoparte</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Año</th>
+            <th>Prestado a</th>
+            <th>Fecha salida</th>
+            <th>Fecha regreso</th>
+            <th>Comentarios</th>
+            <th>Estado</th>
+            <th>Acción</th>
+        </tr>
+
+        {% for producto in prestamos %}
+        <tr>
+            <td>{{ producto.autoparte }}</td>
+            <td>{{ producto.marca }}</td>
+            <td>{{ producto.modelo }}</td>
+            <td>{{ producto.anio }}</td>
+            <td>{{ producto.vendido_a }}</td>
+            <td>{{ producto.fecha_salida }}</td>
+            <td>{{ producto.fecha_prestamo }}</td>
+            <td>{{ producto.comentarios_venta }}</td>
+            <td><span class="badge-prestado">Prestado</span></td>
+            <td>
+                <a href="/devolver/{{ producto.id }}">
+                    <button class="btn-devuelto">Marcar devuelto</button>
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% else %}
+
+<div class="vacio">
+    <h2>No hay préstamos activos</h2>
+    <p>Cuando registres una pieza como préstamo, aparecerá aquí.</p>
+</div>
+
+{% endif %}
+
+{% endblock %}

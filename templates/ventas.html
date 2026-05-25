@@ -1,0 +1,310 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Ventas y préstamos
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .ventas-header {
+        margin-bottom: 28px;
+    }
+
+    .ventas-header h1 {
+        font-size: 34px;
+        margin-bottom: 8px;
+        color: white;
+    }
+
+    .ventas-header p {
+        color: #9ca3af;
+    }
+
+    .ventas-card {
+        background: #ffffff;
+        color: #111827;
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        margin-bottom: 30px;
+    }
+
+    .ventas-card h2 {
+        margin-bottom: 18px;
+        color: #111827;
+    }
+
+    .form-grid-ventas {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .form-grid-ventas select,
+    .form-grid-ventas input,
+    .form-grid-ventas textarea {
+        width: 100%;
+        padding: 13px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: #111827;
+        font-size: 14px;
+    }
+
+    .form-grid-ventas textarea {
+        grid-column: span 2;
+        min-height: 90px;
+        resize: vertical;
+    }
+
+    .buscador-producto {
+        grid-column: span 2;
+    }
+
+    .btn-guardar-venta {
+        margin-top: 18px;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .ventas-table {
+        background: #ffffff;
+        color: #111827;
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        overflow-x: auto;
+    }
+
+    .ventas-table h2 {
+        margin-bottom: 18px;
+    }
+
+    .ventas-table table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 950px;
+    }
+
+    .ventas-table th {
+        background: #e5e7eb;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .ventas-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .badge-vendido {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-prestado {
+        background: #e0f2fe;
+        color: #075985;
+    }
+
+    .badge-credito {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .alerta-ok {
+        background: #dcfce7;
+        color: #166534;
+        padding: 14px;
+        border-radius: 8px;
+        margin-bottom: 18px;
+        font-weight: bold;
+    }
+
+    .alerta-error {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 14px;
+        border-radius: 8px;
+        margin-bottom: 18px;
+        font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+        .form-grid-ventas {
+            grid-template-columns: 1fr;
+        }
+
+        .form-grid-ventas textarea,
+        .buscador-producto {
+            grid-column: span 1;
+        }
+    }
+</style>
+
+<div class="ventas-header">
+    <h1>Ventas, créditos y préstamos</h1>
+    <p>Registra salidas de inventario, cantidades vendidas, créditos o préstamos.</p>
+</div>
+
+<div class="ventas-card">
+    <h2>Registrar movimiento</h2>
+
+    {% if mensaje %}
+        <div class="alerta-ok">{{ mensaje }}</div>
+    {% endif %}
+
+    {% if error %}
+        <div class="alerta-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+
+        <div class="form-grid-ventas">
+
+            <input
+                type="text"
+                id="buscadorProducto"
+                class="buscador-producto"
+                placeholder="Buscar producto: ejemplo Toyota Rav4 Faro..."
+                onkeyup="filtrarProductos()"
+            >
+
+            <select name="producto_id" id="productoSelect" required>
+                <option value="">Selecciona una pieza</option>
+
+                {% for producto in productos %}
+                    <option
+                        value="{{ producto.id }}"
+                        data-texto="{{ producto.autoparte }} {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }} {{ producto.motor }} {{ producto.transmision }} {{ producto.lado }} {{ producto.origen }}"
+                    >
+                        {{ producto.autoparte }} - {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }} | Stock: {{ producto.stock }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="tipo_movimiento" required>
+                <option value="">Tipo de movimiento</option>
+                <option value="vendido">Venta contado</option>
+                <option value="credito">Venta a crédito</option>
+                <option value="prestado">Préstamo</option>
+            </select>
+
+            <input
+                type="number"
+                name="cantidad"
+                min="1"
+                value="1"
+                placeholder="Cantidad"
+                required
+            >
+
+            <input type="text" name="vendido_a" placeholder="Cliente / Bodega / Persona">
+
+            <select name="metodo_pago" required>
+                <option value="">Método de pago</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="credito">Crédito</option>
+                <option value="prestamo">Préstamo</option>
+                <option value="otro">Otro</option>
+            </select>
+
+            <select name="factura">
+                <option value="">¿Factura?</option>
+                <option value="si">Sí</option>
+                <option value="no">No</option>
+            </select>
+
+            <input type="date" name="fecha_salida">
+
+            <input type="date" name="fecha_prestamo">
+
+            <textarea name="comentarios_venta" placeholder="Comentarios o condiciones del movimiento"></textarea>
+
+        </div>
+
+        <button type="submit" class="btn-guardar-venta">
+            Registrar movimiento
+        </button>
+
+    </form>
+</div>
+
+<div class="ventas-table">
+    <h2>Historial de movimientos</h2>
+
+    <table>
+        <tr>
+            <th>Autoparte</th>
+            <th>Cliente / Bodega</th>
+            <th>Estado</th>
+            <th>Método pago</th>
+            <th>Factura</th>
+            <th>Fecha salida</th>
+            <th>Fecha préstamo</th>
+            <th>Comentarios</th>
+        </tr>
+
+        {% for producto in movimientos %}
+        <tr>
+            <td>{{ producto.autoparte }}</td>
+            <td>{{ producto.vendido_a }}</td>
+
+            <td>
+                {% if producto.estado == "vendido" %}
+                    <span class="badge badge-vendido">Vendido</span>
+                {% elif producto.estado == "prestado" %}
+                    <span class="badge badge-prestado">Prestado</span>
+                {% elif producto.estado == "credito" %}
+                    <span class="badge badge-credito">Crédito</span>
+                {% else %}
+                    {{ producto.estado }}
+                {% endif %}
+            </td>
+
+            <td>{{ producto.metodo_pago }}</td>
+            <td>{{ producto.factura }}</td>
+            <td>{{ producto.fecha_salida }}</td>
+            <td>{{ producto.fecha_prestamo }}</td>
+            <td>{{ producto.comentarios_venta }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<script>
+function filtrarProductos() {
+    let input = document.getElementById("buscadorProducto").value.toLowerCase().trim();
+    let palabras = input.split(" ").filter(p => p.length > 0);
+    let select = document.getElementById("productoSelect");
+    let opciones = select.getElementsByTagName("option");
+
+    for (let i = 1; i < opciones.length; i++) {
+        let texto = opciones[i].getAttribute("data-texto").toLowerCase();
+
+        let coincide = palabras.every(palabra => texto.includes(palabra));
+
+        opciones[i].style.display = coincide ? "" : "none";
+    }
+}
+</script>
+
+{% endblock %}

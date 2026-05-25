@@ -3,130 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Producto</title>
+    <title>Editar Autoparte</title>
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background: #111;
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        form {
-            background: #1b1b1b;
-            padding: 35px;
-            border-radius: 15px;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #ff3333;
-            font-size: 28px;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px;
-            margin-top: 12px;
-            border-radius: 8px;
-            border: none;
-            font-size: 16px;
-        }
-
-        button {
-            width: 100%;
-            margin-top: 20px;
-            padding: 14px;
-            background: #b30000;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #d10000;
-        }
-
-        .volver {
-            display: block;
-            text-align: center;
-            margin-top: 15px;
-            color: #ccc;
-            text-decoration: none;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            body {
-                align-items: flex-start;
-                padding: 15px;
-            }
-
-            form {
-                padding: 25px;
-                margin-top: 20px;
-            }
-
-            h2 {
-                font-size: 22px;
-            }
-
-            input,
-            button {
-                padding: 12px;
-                font-size: 15px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            form {
-                padding: 20px;
-            }
-
-            h2 {
-                font-size: 20px;
-            }
-
-            input,
-            button {
-                font-size: 14px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
 
-<form method="POST">
-    <h2>Editar Producto</h2>
+<div class="contenedor">
+    <form method="POST">
+        <h2>Editar Autoparte</h2>
 
-    <input type="text" name="nombre" value="{{ producto.nombre }}" required>
-    <input type="text" name="marca" value="{{ producto.marca }}" required>
-    <input type="text" name="modelo" value="{{ producto.modelo }}" required>
-    <input type="number" name="anio" value="{{ producto.anio }}" required>
-    <input type="number" step="0.01" name="precio" value="{{ producto.precio }}" required>
+        <div class="form-grid">
 
-    <button type="submit">Guardar cambios</button>
+            <input type="text" name="marca" placeholder="Marca" value="{{ producto.marca or '' }}">
 
-    <a href="/admin" class="volver">← Volver al panel</a>
-</form>
+            <input type="text" name="modelo" placeholder="Modelo" value="{{ producto.modelo or '' }}">
+
+            <input type="number" name="anio" placeholder="Año" value="{{ producto.anio or '' }}">
+
+            <input type="text" name="autoparte" placeholder="Autoparte / Pieza" value="{{ producto.autoparte or '' }}">
+
+            <input type="text" name="transmision" placeholder="Transmisión" value="{{ producto.transmision or '' }}">
+
+            <input type="text" name="motor" placeholder="Motor" value="{{ producto.motor or '' }}">
+
+            <input type="text" name="propiedad" placeholder="Propiedad / Dueño" value="{{ producto.propiedad or '' }}">
+
+            <input type="text" name="tipo" placeholder="Tipo" value="{{ producto.tipo or '' }}">
+
+            <input type="text" name="lado" placeholder="Lado" value="{{ producto.lado or '' }}">
+
+            <input type="text" name="origen" placeholder="Origen" value="{{ producto.origen or '' }}">
+
+            <input type="number" step="0.01" name="costo_venta" placeholder="Costo de venta" value="{{ producto.costo_venta or '' }}">
+
+            <input type="text" name="link_ml" placeholder="Link Mercado Libre" value="{{ producto.link_ml or '' }}">
+
+            <textarea name="observaciones" placeholder="Observaciones">{{ producto.observaciones or '' }}</textarea>
+
+        </div>
+
+        <button type="submit">Guardar cambios</button>
+
+        <a href="/admin" class="volver">← Volver al panel</a>
+    </form>
+</div>
 
 </body>
 </html>

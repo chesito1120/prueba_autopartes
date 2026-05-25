@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Sistema Autopartes{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .top-nav {
+            width: 100%;
+            
+             background: linear-gradient(135deg, #111827, #164e63, #0ea5e9);
+
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+        }
+
+        .top-nav h2 {
+            color: white;
+            font-size: 22px;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            background: rgba(255,255,255,0.14);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.25s;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .nav-links a:hover {
+            background: white;
+            color: #111827;
+            transform: translateY(-2px);
+        }
+
+        .nav-links .logout {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .nav-links .logout:hover {
+            background: #991b1b;
+            color: white;
+        }
+
+        .main-content {
+            padding: 28px;
+        }
+
+        @media (max-width: 768px) {
+            .top-nav {
+                justify-content: center;
+                text-align: center;
+            }
+
+            .nav-links {
+                justify-content: center;
+            }
+
+            .nav-links a {
+                font-size: 13px;
+                padding: 9px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="top-nav">
+    <h2>AUTO PARTES</h2>
+
+    <nav class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/inventario">Inventario</a>
+        <a href="/ventas">Ventas</a>
+        <a href="/prestamos">Préstamos</a>
+        <a href="/excel">Carga Excel</a>
+        <a href="/">Catálogo</a>
+        <a href="/logout" class="logout">Cerrar sesión</a>
+    </nav>
+</header>
+
+<main class="main-content">
+    {% block contenido %}
+    {% endblock %}
+</main>
+
+</body>
+</html>

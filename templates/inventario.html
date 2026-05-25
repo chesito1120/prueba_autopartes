@@ -1,0 +1,247 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Inventario
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .inventario-header {
+        margin-bottom: 25px;
+    }
+
+    .inventario-header h1 {
+        color: white;
+        font-size: 34px;
+        margin-bottom: 8px;
+    }
+
+    .inventario-header p {
+        color: #9ca3af;
+    }
+
+    .inventario-buscador {
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: none;
+        margin-bottom: 25px;
+        background: #111827;
+        color: white;
+    }
+
+    .inventario-card {
+        background: white;
+        color: #111827;
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        overflow-x: auto;
+    }
+
+    .inventario-card table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1100px;
+    }
+
+    .inventario-card th {
+        background: #e5e7eb;
+        color: #111827;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .inventario-card td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #111827;
+        vertical-align: middle;
+    }
+
+    .inventario-img {
+        width: 90px;
+        height: 65px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #e5e7eb;
+    }
+
+    .sin-foto {
+        width: 90px;
+        height: 65px;
+        border-radius: 8px;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .badge-disponible {
+        background: #dcfce7;
+        color: #166534;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .badge-agotado {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .acciones-inventario {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-mini {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+    }
+
+    .btn-editar {
+        background: #374151;
+    }
+
+    .btn-sumar {
+        background: #16a34a;
+    }
+
+    .btn-restar {
+        background: #2563eb;
+    }
+
+    .btn-eliminar {
+        background: #dc2626;
+    }
+</style>
+
+<div class="inventario-header">
+    <h1>Inventario</h1>
+    <p>Consulta, busca y administra todas las autopartes registradas.</p>
+</div>
+
+<input
+    type="text"
+    id="buscador"
+    class="inventario-buscador"
+    placeholder="Buscar por autoparte, marca, modelo, año, propietario..."
+    onkeyup="buscarProducto()"
+>
+
+<div class="inventario-card">
+
+    <table id="tablaInventario">
+
+        <tr>
+            <th>Foto</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Año</th>
+            <th>Autoparte</th>
+            <th>Propiedad</th>
+            <th>Stock</th>
+            <th>Precio</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+
+        {% for producto in productos %}
+
+        <tr>
+
+            <td>
+                {% if producto.foto %}
+                    <img
+                        class="inventario-img"
+                        src="{{ url_for('static', filename='uploads/' ~ producto.foto) }}"
+                        alt="{{ producto.autoparte }}"
+                    >
+                {% else %}
+                    <div class="sin-foto">Sin foto</div>
+                {% endif %}
+            </td>
+
+            <td>{{ producto.marca or '-' }}</td>
+
+            <td>{{ producto.modelo or '-' }}</td>
+
+            <td>{{ producto.anio or '-' }}</td>
+
+            <td>{{ producto.autoparte or '-' }}</td>
+
+            <td>{{ producto.propiedad or '-' }}</td>
+
+            <td>{{ producto.stock or 0 }}</td>
+
+            <td>${{ producto.costo_venta or 0 }}</td>
+
+            <td>
+                {% if producto.stock > 0 %}
+                    <span class="badge-disponible">Disponible</span>
+                {% else %}
+                    <span class="badge-agotado">Agotado</span>
+                {% endif %}
+            </td>
+
+            <td>
+                <div class="acciones-inventario">
+
+    <a href="/editar/{{ producto.id }}">
+        <button class="btn-mini btn-editar">
+            Editar
+        </button>
+    </a>
+
+    <a href="/stock/{{ producto.id }}">
+        <button class="btn-mini btn-sumar">
+            Stock
+        </button>
+    </a>
+
+    <a href="/eliminar/{{ producto.id }}">
+        <button class="btn-mini btn-eliminar">
+            Eliminar
+        </button>
+    </a>
+
+</div>
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</div>
+
+<script>
+function buscarProducto() {
+    let input = document.getElementById("buscador").value.toLowerCase();
+    let tabla = document.getElementById("tablaInventario");
+    let filas = tabla.getElementsByTagName("tr");
+
+    for (let i = 1; i < filas.length; i++) {
+        let texto = filas[i].innerText.toLowerCase();
+        filas[i].style.display = texto.includes(input) ? "" : "none";
+    }
+}
+</script>
+
+{% endblock %}

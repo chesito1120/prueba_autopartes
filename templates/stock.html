@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Ajustar stock
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .stock-card {
+        background: white;
+        color: #111827;
+        max-width: 520px;
+        margin: auto;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .stock-card h1 {
+        margin-bottom: 10px;
+        color: #111827;
+    }
+
+    .stock-card p {
+        color: #4b5563;
+        margin-bottom: 20px;
+    }
+
+    .stock-card input {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        margin-bottom: 18px;
+        color: #111827;
+        background: white;
+        font-size: 16px;
+    }
+
+    .btn-stock-save {
+        width: 100%;
+        padding: 14px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .volver {
+        display: block;
+        text-align: center;
+        margin-top: 18px;
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: bold;
+    }
+</style>
+
+<div class="stock-card">
+    <h1>Ajustar stock</h1>
+
+    <p>
+        Producto:
+        <strong>
+            {{ producto.autoparte }} - {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }}
+        </strong>
+    </p>
+
+    <form method="POST">
+        <input
+            type="number"
+            name="stock"
+            min="0"
+            value="{{ producto.stock }}"
+            placeholder="Nueva cantidad"
+            required
+        >
+
+        <button type="submit" class="btn-stock-save">
+            Guardar nueva cantidad
+        </button>
+    </form>
+
+    <a href="/inventario" class="volver">← Volver al inventario</a>
+</div>
+
+{% endblock %}

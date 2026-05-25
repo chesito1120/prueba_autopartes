@@ -1,7 +1,9 @@
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin</title>
+    <title>Login | Sistema Autopartes</title>
 
     <style>
         * {
@@ -12,74 +14,144 @@
         }
 
         body {
-            background: #111;
-            color: white;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #111827, #164e63, #0ea5e9);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
         }
 
-        .login-box {
-            background: #1b1b1b;
-            padding: 40px;
-            border-radius: 15px;
+        .login-card {
             width: 100%;
-            max-width: 400px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            max-width: 520px;
+            background: rgba(17, 24, 39, 0.96);
+            border-radius: 26px;
+            padding: 42px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.12);
         }
 
-        h2 {
+        .logo-box {
+            width: 150px;
+            height: 150px;
+            background: #e5e7eb;
+            border-radius: 24px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            font-weight: bold;
             text-align: center;
-            margin-bottom: 25px;
-            color: #ff3333;
-            font-size: 28px;
+            overflow: hidden;
         }
 
-        input {
+        .logo-box img {
             width: 100%;
-            padding: 14px;
-            margin-top: 12px;
+            height: 100%;
+            object-fit: contain;
+            padding: 10px;
+        }
+
+        .login-card h1 {
+            color: #ffffff;
+            text-align: center;
+            font-size: 30px;
+            margin-bottom: 8px;
+        }
+
+        .login-card p {
+            color: #cbd5e1;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #111827;
+            font-size: 15px;
+        }
+
+        .login-card input:focus {
+            outline: 3px solid rgba(14,165,233,0.35);
+            border-color: #0ea5e9;
+        }
+
+        .login-card button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 8px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        button {
-            width: 100%;
-            margin-top: 20px;
-            padding: 14px;
-            background: #b30000;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2563eb, #0ea5e9);
             color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            transition: 0.3s;
+            cursor: pointer;
+            transition: 0.25s;
         }
 
-        button:hover {
-            background: #d10000;
+        .login-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(14,165,233,0.35);
         }
 
-        /* CELULAR */
-        @media (max-width: 768px) {
-            .login-box {
-                padding: 25px;
-                border-radius: 12px;
+        .footer-text {
+            margin-top: 24px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .login-card {
+                padding: 30px 22px;
             }
 
-            h2 {
-                font-size: 22px;
+            .logo-box {
+                width: 120px;
+                height: 120px;
             }
 
-            input,
-            button {
-                padding: 12px;
-                font-size: 15px;
+            .login-card h1 {
+                font-size: 24px;
             }
         }
     </style>
 </head>
+
+<body>
+
+<div class="login-card">
+
+    <div class="logo-box">
+        <!-- Cuando tengas el logo, descomenta esta línea -->
+        <!-- <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"> -->
+        LOGO
+    </div>
+
+    <h1>Sistema de Inventario</h1>
+    <p>Autopartes CH · Ventas · Préstamos · Catálogo</p>
+
+    <form method="POST">
+        <input type="text" name="usuario" placeholder="Usuario" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+
+        <button type="submit">
+            Iniciar sesión
+        </button>
+    </form>
+
+    <p class="footer-text">
+        Acceso exclusivo para administradores y vendedores
+    </p>
+
+</div>
+
+</body>
+</html>

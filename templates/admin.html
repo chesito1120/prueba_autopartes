@@ -2,158 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Administrador</title>
 
-    <!-- =========================
-         PWA CONFIG
-    ========================== -->
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#b30000">
     <link rel="icon" href="/static/icons/icon-192.png">
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background: #111;
-            color: white;
-            padding: 30px;
-        }
-
-        header {
-            background: linear-gradient(90deg, #111, #b30000);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .install-btn {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            background: #222;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: none;
-        }
-
-        .acciones {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        button {
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .btn {
-            padding: 10px 14px;
-            color: white;
-        }
-
-        .rojo { background: #b30000; }
-        .gris { background: #444; }
-        .verde { background: #00aa55; }
-
-        .dashboard {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 35px;
-        }
-
-        .card {
-            background: #1b1b1b;
-            padding: 25px;
-            width: 220px;
-            text-align: center;
-            border-radius: 15px;
-        }
-
-        .card h2 {
-            color: #ff3333;
-            font-size: 28px;
-        }
-
-        .form-box {
-            background: #1b1b1b;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 700px;
-            margin: auto;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px;
-            margin-top: 12px;
-            border: none;
-            border-radius: 8px;
-        }
-
-        .tabla {
-            margin-top: 40px;
-            background: #1b1b1b;
-            padding: 20px;
-            border-radius: 15px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 14px;
-            text-align: center;
-        }
-
-        tr {
-            border-bottom: 1px solid #333;
-        }
-
-        img {
-            width: 80px;
-            border-radius: 8px;
-        }
-
-        a {
-            text-decoration: none;
-        }
-
-        .acciones-btns {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
 <header>
     <h1>Panel de Administración</h1>
-
-    <!-- Botón PWA instalar -->
-    <button class="install-btn" id="installBtn" style="display:none;">
-        Instalar App
-    </button>
+    <p>Gestión de inventario de autopartes</p>
 </header>
 
 <div class="acciones">
@@ -164,7 +26,7 @@
 <div class="dashboard">
     <div class="card">
         <h2>{{ total }}</h2>
-        <p>Total</p>
+        <p>Total de piezas</p>
     </div>
 
     <div class="card">
@@ -174,25 +36,45 @@
 
     <div class="card">
         <h2>{{ agotados }}</h2>
-        <p>Agotados</p>
+        <p>Agotadas</p>
     </div>
 </div>
 
 <div class="form-box">
+    <h2>Registrar nueva autoparte</h2>
+
     <form method="POST" enctype="multipart/form-data">
+        <div class="form-grid">
 
-        <input type="text" name="nombre" placeholder="Nombre" required>
-        <input type="text" name="marca" placeholder="Marca" required>
-        <input type="text" name="modelo" placeholder="Modelo" required>
-        <input type="number" name="anio" placeholder="Año" required>
-        <input type="number" step="0.01" name="precio" placeholder="Precio" required>
-        <input type="number" name="stock" placeholder="Stock" required>
-        <input type="file" name="imagen" required>
+            <input type="text" name="marca" placeholder="Marca">
+            <input type="text" name="modelo" placeholder="Modelo">
 
-        <button class="btn rojo" style="width:100%; margin-top:15px;">
+            <input type="number" name="anio" placeholder="Año">
+            <input type="text" name="autoparte" placeholder="Autoparte / Pieza">
+
+            <input type="text" name="transmision" placeholder="Transmisión">
+            <input type="text" name="motor" placeholder="Motor">
+
+            <input type="text" name="propiedad" placeholder="Propiedad / Dueño">
+            <input type="text" name="tipo" placeholder="Tipo">
+
+            <input type="text" name="lado" placeholder="Lado">
+            <input type="text" name="origen" placeholder="Origen">
+
+            <input type="number" step="0.01" name="costo_venta" placeholder="Costo de venta">
+            <input type="number" name="stock" placeholder="Stock" value="1">
+
+            <input class="full" type="text" name="link_ml" placeholder="Link Mercado Libre">
+
+            <textarea name="observaciones" placeholder="Observaciones"></textarea>
+
+            <input class="full" type="file" name="foto">
+
+        </div>
+
+        <button class="btn rojo" style="width:100%; margin-top:20px;">
             Guardar Producto
         </button>
-
     </form>
 </div>
 
@@ -201,8 +83,13 @@
 
     <table>
         <tr>
-            <th>Imagen</th>
-            <th>Producto</th>
+            <th>Foto</th>
+            <th>Autoparte</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Año</th>
+            <th>Propiedad</th>
+            <th>Origen</th>
             <th>Precio</th>
             <th>Stock</th>
             <th>Estado</th>
@@ -211,14 +98,21 @@
 
         {% for producto in productos %}
         <tr>
-
             <td>
-                <img src="{{ url_for('static', filename='uploads/' + producto.imagen) }}">
+                {% if producto.foto %}
+                    <img src="{{ url_for('static', filename='uploads/' + producto.foto) }}" alt="{{ producto.autoparte }}">
+                {% else %}
+                    Sin foto
+                {% endif %}
             </td>
 
-            <td>{{ producto.nombre }}</td>
-            <td>${{ producto.precio }}</td>
-
+            <td>{{ producto.autoparte }}</td>
+            <td>{{ producto.marca }}</td>
+            <td>{{ producto.modelo }}</td>
+            <td>{{ producto.anio }}</td>
+            <td>{{ producto.propiedad }}</td>
+            <td>{{ producto.origen }}</td>
+            <td>${{ producto.costo_venta }}</td>
             <td>{{ producto.stock }}</td>
 
             <td>
@@ -260,41 +154,15 @@
 
                 </div>
             </td>
-
         </tr>
         {% endfor %}
     </table>
 </div>
 
-<!-- =========================
-     PWA SERVICE WORKER
-========================== -->
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/static/service-worker.js');
 }
-</script>
-
-<!-- =========================
-     BOTÓN INSTALAR APP
-========================== -->
-<script>
-let deferredPrompt;
-const installBtn = document.getElementById("installBtn");
-
-window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = "block";
-});
-
-installBtn.addEventListener("click", () => {
-    installBtn.style.display = "none";
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => {
-        deferredPrompt = null;
-    });
-});
 </script>
 
 </body>
