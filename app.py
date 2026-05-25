@@ -6,17 +6,17 @@ import os
 
 app = Flask(__name__)
 
-# Llave secreta segura para producción
+# Llave secreta segura para cookies y sesiones
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
 # =========================
 # CONFIGURACIÓN DE BASE DE DATOS
 # =========================
 
-# 1. Intentar obtener la URL directa (Estándar de Railway)
+# 1. Intentar obtener la URL directa (El estándar automático de Railway)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# 2. Intentar obtener variables individuales por si acaso
+# 2. Intentar obtener variables individuales de respaldo
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
 DB_HOST = os.getenv("MYSQLHOST")
@@ -25,8 +25,9 @@ DB_NAME = os.getenv("MYSQLDATABASE")
 
 EN_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
+# Lógica de conexión inteligente
 if DATABASE_URL:
-    # Ajuste por si Railway entrega la URL con 'mysql://' (SQLAlchemy requiere 'mysql+pymysql://')
+    # Ajuste crucial: Railway entrega 'mysql://', pero SQLAlchemy en Python exige 'mysql+pymysql://'
     if DATABASE_URL.startswith("mysql://"):
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
     else:
@@ -39,14 +40,14 @@ elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     )
 
 elif EN_RAILWAY:
-    # Mensaje descriptivo por si olvidaste vincular la base de datos en Railway
+    # Si estás en Railway pero no hay credenciales, te avisa claramente en los logs
     raise RuntimeError(
-        "Error: Estás en Railway pero no se detectó 'DATABASE_URL' ni las variables de MySQL. "
-        "Asegúrate de conectar un servicio de Base de Datos a esta aplicación."
+        "Error: Estás en Railway pero no se detectó la variable DATABASE_URL ni las variables individuales de MySQL. "
+        "Asegúrate de vincular tu base de datos en la pestaña de Variables de Railway."
     )
 
 else:
-    # Respaldo local
+    # Respaldo seguro en SQLite local (para cuando programas desde tu computadora)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes_local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -74,7 +75,7 @@ USUARIOS = {
 }
 
 # =========================
-# MODELO
+# MODELO DE DATOS
 # =========================
 
 class Producto(db.Model):
@@ -105,7 +106,7 @@ class Producto(db.Model):
 
 
 # =========================
-# CATÁLOGO
+# RUTAS / CATÁLOGO
 # =========================
 
 @app.route("/")
@@ -127,7 +128,7 @@ def home():
 
 
 # =========================
-# LOGIN
+# AUTENTICACIÓN
 # =========================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -156,7 +157,7 @@ def logout():
 
 
 # =========================
-# ADMIN / AGREGAR PRODUCTO
+# ADMINISTRACIÓN
 # =========================
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -230,7 +231,7 @@ def inventario():
 
 
 # =========================
-# EDITAR
+# EDITAR / ELIMINAR
 # =========================
 
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
@@ -270,7 +271,7 @@ def editar(id):
 
 
 # =========================
-# STOCK
+# CONTROL DE STOCK
 # =========================
 
 @app.route("/stock/<int:id>", methods=["GET", "POST"])
@@ -349,7 +350,7 @@ def eliminar(id):
 
 
 # =========================
-# DASHBOARD
+# DASHBOARD INFORMATIVO
 # =========================
 
 @app.route("/dashboard")
@@ -394,7 +395,7 @@ def dashboard():
 
 
 # =========================
-# VENTAS / CRÉDITOS / PRÉSTAMOS
+# MOVIMIENTOS / VENTAS
 # =========================
 
 @app.route("/ventas", methods=["GET", "POST"])
@@ -499,7 +500,7 @@ def devolver_prestamo(id):
 
 
 # =========================
-# EXCEL
+# IMPORTAR DESDE EXCEL
 # =========================
 
 @app.route("/excel", methods=["GET", "POST"])
@@ -565,15 +566,16 @@ def excel():
 
 
 # =========================
-# CREAR TABLAS AUTOMÁTICAMENTE
+# INICIALIZACIÓN AUTOMÁTICA
 # =========================
 
+# Esto creará las tablas automáticamente en MySQL (Railway) o SQLite (Local)
 with app.app_context():
     db.create_all()
 
 
 # =========================
-# EJECUCIÓN
+# EJECUCIÓN DEL SERVIDOR
 # =========================
 
 if __name__ == "__main__":
