@@ -20,11 +20,14 @@ DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
-if DATABASE_URL:
-    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-
-elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
+else:
+    raise RuntimeError("Faltan variables de base de datos en Railway")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
