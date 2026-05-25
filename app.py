@@ -12,8 +12,6 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 # BASE DE DATOS
 # =========================
 
-DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
-
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
 DB_HOST = os.getenv("MYSQLHOST")
@@ -26,13 +24,6 @@ if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
-else:
-    raise RuntimeError("Faltan variables de base de datos en Railway")
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
-
 else:
     raise RuntimeError("Faltan variables de base de datos en Railway")
 
