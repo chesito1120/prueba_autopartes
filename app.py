@@ -31,7 +31,7 @@ elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     )
 
 else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes.db"
+    raise RuntimeError("Faltan variables de base de datos en Railway")
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
