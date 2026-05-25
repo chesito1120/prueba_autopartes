@@ -18,14 +18,20 @@ DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
+EN_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
+
 if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
-else:
+
+elif EN_RAILWAY:
     raise RuntimeError("Faltan variables de base de datos en Railway")
+
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes_local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
