@@ -1,11 +1,18 @@
 from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from openpyxl import load_workbook
+from urllib.parse import quote_plus
 import os
 
 app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
+
+# =========================
+# BASE DE DATOS
+# =========================
+
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
 
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
@@ -13,17 +20,27 @@ DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
-if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+if DATABASE_URL:
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+
+elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+    DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
+
     app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
+
 else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:@localhost/autopartes"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 
 db = SQLAlchemy(app)
+
+# =========================
+# USUARIOS TEMPORALES
+# =========================
 
 USUARIOS = {
     "admin": {
@@ -39,8 +56,10 @@ USUARIOS = {
         "rol": "cliente"
     }
 }
-PASSWORD_ADMIN = "123456"
 
+# =========================
+# MODELO
+# =========================
 
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -70,6 +89,10 @@ class Producto(db.Model):
     fecha_prestamo = db.Column(db.String(100))
 
 
+# =========================
+# CATÁLOGO
+# =========================
+
 @app.route("/")
 def home():
     pagina = request.args.get("page", 1, type=int)
@@ -88,20 +111,21 @@ def home():
     )
 
 
+# =========================
+# LOGIN
+# =========================
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        usuario = request.form["usuario"]
-        password = request.form["password"]
+        usuario = request.form.get("usuario")
+        password = request.form.get("password")
 
         if usuario in USUARIOS and USUARIOS[usuario]["password"] == password:
             session["usuario"] = usuario
             session["rol"] = USUARIOS[usuario]["rol"]
 
-            if session["rol"] == "admin":
-               return redirect("/inventario")
-
-            if session["rol"] == "vendedor":
+            if session["rol"] in ["admin", "vendedor"]:
                 return redirect("/inventario")
 
             if session["rol"] == "cliente":
@@ -115,6 +139,10 @@ def logout():
     session.clear()
     return redirect("/")
 
+
+# =========================
+# ADMIN / AGREGAR PRODUCTO
+# =========================
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
@@ -169,45 +197,51 @@ def admin():
     )
 
 
+# =========================
+# INVENTARIO
+# =========================
+
+@app.route("/inventario")
+def inventario():
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    productos = Producto.query.all()
+
+    return render_template(
+        "inventario.html",
+        productos=productos
+    )
+
+
+# =========================
+# EDITAR
+# =========================
+
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
 def editar(id):
-
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
     producto = Producto.query.get_or_404(id)
 
     if request.method == "POST":
-
         producto.marca = request.form.get("marca")
         producto.modelo = request.form.get("modelo")
         producto.anio = int(request.form.get("anio") or 0)
-
-        producto.autoparte = (
-            request.form.get("autoparte")
-            or request.form.get("nombre")
-        )
-
+        producto.autoparte = request.form.get("autoparte") or request.form.get("nombre")
         producto.observaciones = request.form.get("observaciones")
-
         producto.transmision = request.form.get("transmision")
-
         producto.motor = request.form.get("motor")
-
         producto.propiedad = request.form.get("propiedad")
-
         producto.tipo = request.form.get("tipo")
-
         producto.lado = request.form.get("lado")
-
         producto.origen = request.form.get("origen")
-
         producto.costo_venta = float(
             request.form.get("costo_venta")
             or request.form.get("precio")
             or 0
         )
-
         producto.link_ml = request.form.get("link_ml")
 
         db.session.commit()
@@ -216,6 +250,37 @@ def editar(id):
 
     return render_template(
         "editar.html",
+        producto=producto
+    )
+
+
+# =========================
+# STOCK
+# =========================
+
+@app.route("/stock/<int:id>", methods=["GET", "POST"])
+def ajustar_stock(id):
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    producto = Producto.query.get_or_404(id)
+
+    if request.method == "POST":
+        nuevo_stock = int(request.form.get("stock") or 0)
+
+        producto.stock = nuevo_stock
+
+        if producto.stock > 0:
+            producto.estado = "disponible"
+        else:
+            producto.estado = "agotado"
+
+        db.session.commit()
+
+        return redirect("/inventario")
+
+    return render_template(
+        "stock.html",
         producto=producto
     )
 
@@ -268,17 +333,10 @@ def eliminar(id):
     db.session.commit()
     return redirect("/inventario")
 
-@app.route("/inventario")
-def inventario():
-    if not session.get("rol") in ["admin", "vendedor"]:
-        return redirect("/login")
 
-    productos = Producto.query.all()
-
-    return render_template(
-        "inventario.html",
-        productos=productos
-    )
+# =========================
+# DASHBOARD
+# =========================
 
 @app.route("/dashboard")
 def dashboard():
@@ -293,11 +351,12 @@ def dashboard():
 
     vendidas = Producto.query.filter(Producto.estado == "vendido").count()
     prestadas = Producto.query.filter(Producto.estado == "prestado").count()
-    credito = Producto.query.filter(Producto.metodo_pago == "credito").count()
+    credito = Producto.query.filter(Producto.estado == "credito").count()
 
     facturadas = Producto.query.filter(
         Producto.factura.isnot(None),
-        Producto.factura != ""
+        Producto.factura != "",
+        Producto.factura != "no"
     ).count()
 
     valor_total = 0
@@ -318,6 +377,11 @@ def dashboard():
         credito=credito,
         facturadas=facturadas
     )
+
+
+# =========================
+# VENTAS / CRÉDITOS / PRÉSTAMOS
+# =========================
 
 @app.route("/ventas", methods=["GET", "POST"])
 def ventas():
@@ -363,9 +427,6 @@ def ventas():
                 f"{request.form.get('comentarios_venta') or ''}"
             )
 
-            if producto.stock == 0:
-                producto.estado = tipo_movimiento
-
             db.session.commit()
 
             mensaje = f"Movimiento registrado correctamente. Cantidad: {cantidad}"
@@ -385,89 +446,9 @@ def ventas():
     )
 
 
-
-@app.route("/excel", methods=["GET", "POST"])
-def excel():
-    if not session.get("rol") in ["admin", "vendedor"]:
-        return redirect("/login")
-
-    mensaje = None
-
-    if request.method == "POST":
-        archivo = request.files.get("archivo_excel")
-
-        if archivo:
-            workbook = load_workbook(archivo)
-            hoja = workbook.active
-
-            encabezados = []
-
-            for celda in hoja[1]:
-                encabezados.append(str(celda.value).strip().lower())
-
-            total_cargados = 0
-
-            for fila in hoja.iter_rows(min_row=2, values_only=True):
-                datos = dict(zip(encabezados, fila))
-
-                nuevo = Producto(
-                    marca=datos.get("marca"),
-                    modelo=datos.get("modelo"),
-                    anio=int(datos.get("año") or 0),
-                    observaciones=datos.get("observaciones"),
-                    transmision=datos.get("transmision"),
-                    motor=datos.get("motor"),
-                    autoparte=datos.get("autoparte"),
-                    propiedad=datos.get("propiedad"),
-                    tipo=datos.get("tipo"),
-                    lado=datos.get("lado"),
-                    origen=datos.get("origen"),
-                    costo_venta=float(datos.get("costo de venta") or 0),
-                    foto=datos.get("foto"),
-                    link_ml=datos.get("link mercado libre"),
-                    stock=1,
-                    estado="disponible",
-                    comentarios_venta=datos.get("seccion de las ventas y comentarios"),
-                    metodo_pago=datos.get("metodo de pago"),
-                    factura=datos.get("factura"),
-                    fecha_salida=str(datos.get("fecha de la salida") or ""),
-                    fecha_prestamo=str(datos.get("fecha de prestamos") or "")
-                )
-
-                db.session.add(nuevo)
-                total_cargados += 1
-
-            db.session.commit()
-
-            mensaje = f"Se cargaron {total_cargados} productos correctamente."
-
-    return render_template("excel.html", mensaje=mensaje)
-
-@app.route("/stock/<int:id>", methods=["GET", "POST"])
-def ajustar_stock(id):
-    if not session.get("rol") in ["admin", "vendedor"]:
-        return redirect("/login")
-
-    producto = Producto.query.get_or_404(id)
-
-    if request.method == "POST":
-        nuevo_stock = int(request.form.get("stock") or 0)
-
-        producto.stock = nuevo_stock
-
-        if producto.stock > 0:
-            producto.estado = "disponible"
-        else:
-            producto.estado = "agotado"
-
-        db.session.commit()
-
-        return redirect("/inventario")
-
-    return render_template(
-        "stock.html",
-        producto=producto
-    )
+# =========================
+# PRÉSTAMOS
+# =========================
 
 @app.route("/prestamos")
 def prestamos():
@@ -505,13 +486,86 @@ def devolver_prestamo(id):
     return redirect("/prestamos")
 
 
+# =========================
+# EXCEL
+# =========================
+
+@app.route("/excel", methods=["GET", "POST"])
+def excel():
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    mensaje = None
+
+    if request.method == "POST":
+        archivo = (
+            request.files.get("archivo_excel")
+            or request.files.get("excel")
+        )
+
+        if archivo and archivo.filename:
+            workbook = load_workbook(archivo)
+            hoja = workbook.active
+
+            encabezados = []
+
+            for celda in hoja[1]:
+                encabezados.append(str(celda.value).strip().lower())
+
+            total_cargados = 0
+
+            for fila in hoja.iter_rows(min_row=2, values_only=True):
+                datos = dict(zip(encabezados, fila))
+
+                if not datos.get("autoparte") and not datos.get("marca"):
+                    continue
+
+                nuevo = Producto(
+                    marca=datos.get("marca"),
+                    modelo=datos.get("modelo"),
+                    anio=int(datos.get("año") or 0),
+                    observaciones=datos.get("observaciones"),
+                    transmision=datos.get("transmision"),
+                    motor=datos.get("motor"),
+                    autoparte=datos.get("autoparte"),
+                    propiedad=datos.get("propiedad"),
+                    tipo=datos.get("tipo"),
+                    lado=datos.get("lado"),
+                    origen=datos.get("origen"),
+                    costo_venta=float(datos.get("costo de venta") or 0),
+                    foto=datos.get("foto") or "",
+                    link_ml=datos.get("link mercado libre"),
+                    stock=int(datos.get("stock") or 1),
+                    estado="disponible",
+                    comentarios_venta=datos.get("seccion de las ventas y comentarios"),
+                    metodo_pago=datos.get("metodo de pago"),
+                    factura=datos.get("factura"),
+                    fecha_salida=str(datos.get("fecha de la salida") or ""),
+                    fecha_prestamo=str(datos.get("fecha de prestamos") or "")
+                )
+
+                db.session.add(nuevo)
+                total_cargados += 1
+
+            db.session.commit()
+
+            mensaje = f"Se cargaron {total_cargados} productos correctamente."
+
+    return render_template("excel.html", mensaje=mensaje)
+
+
+# =========================
+# CREAR TABLAS
+# =========================
+
 with app.app_context():
     db.create_all()
 
 
+# =========================
+# RUN
+# =========================
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
