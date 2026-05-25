@@ -6,48 +6,41 @@ import os
 
 app = Flask(__name__)
 
-# Llave secreta segura para cookies y sesiones
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
 # =========================
-# CONFIGURACIÓN DE BASE DE DATOS
+# BASE DE DATOS
 # =========================
 
-# 1. Intentar obtener la URL directa (El estándar automático de Railway)
-DATABASE_URL = os.getenv("DATABASE_URL")
+MYSQL_URL = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL")
 
-# 2. Intentar obtener variables individuales de respaldo
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
 DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
-EN_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
+print("========== DB DEBUG ==========")
+print("MYSQL_URL existe:", bool(MYSQL_URL))
+print("MYSQLUSER existe:", bool(DB_USER))
+print("MYSQLPASSWORD existe:", bool(DB_PASSWORD))
+print("MYSQLHOST existe:", bool(DB_HOST))
+print("MYSQLPORT existe:", bool(DB_PORT))
+print("MYSQLDATABASE existe:", bool(DB_NAME))
+print("==============================")
 
-# Lógica de conexión inteligente
-if DATABASE_URL:
-    # Ajuste crucial: Railway entrega 'mysql://', pero SQLAlchemy en Python exige 'mysql+pymysql://'
-    if DATABASE_URL.startswith("mysql://"):
-        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-    else:
-        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+if MYSQL_URL:
+    app.config["SQLALCHEMY_DATABASE_URI"] = MYSQL_URL
 
 elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
+
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
-elif EN_RAILWAY:
-    # Si estás en Railway pero no hay credenciales, te avisa claramente en los logs
-    raise RuntimeError(
-        "Error: Estás en Railway pero no se detectó la variable DATABASE_URL ni las variables individuales de MySQL. "
-        "Asegúrate de vincular tu base de datos en la pestaña de Variables de Railway."
-    )
-
 else:
-    # Respaldo seguro en SQLite local (para cuando programas desde tu computadora)
+    print("ADVERTENCIA: No se encontraron variables MySQL completas. Usando SQLite temporal.")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes_local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -75,11 +68,12 @@ USUARIOS = {
 }
 
 # =========================
-# MODELO DE DATOS
+# MODELO
 # =========================
 
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+
     marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
     anio = db.Column(db.Integer)
@@ -106,7 +100,7 @@ class Producto(db.Model):
 
 
 # =========================
-# RUTAS / CATÁLOGO
+# CATÁLOGO
 # =========================
 
 @app.route("/")
@@ -128,7 +122,7 @@ def home():
 
 
 # =========================
-# AUTENTICACIÓN
+# LOGIN
 # =========================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -157,7 +151,7 @@ def logout():
 
 
 # =========================
-# ADMINISTRACIÓN
+# ADMIN / AGREGAR PRODUCTO
 # =========================
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -231,7 +225,7 @@ def inventario():
 
 
 # =========================
-# EDITAR / ELIMINAR
+# EDITAR
 # =========================
 
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
@@ -271,7 +265,7 @@ def editar(id):
 
 
 # =========================
-# CONTROL DE STOCK
+# STOCK
 # =========================
 
 @app.route("/stock/<int:id>", methods=["GET", "POST"])
@@ -283,6 +277,7 @@ def ajustar_stock(id):
 
     if request.method == "POST":
         nuevo_stock = int(request.form.get("stock") or 0)
+
         producto.stock = nuevo_stock
 
         if producto.stock > 0:
@@ -350,7 +345,7 @@ def eliminar(id):
 
 
 # =========================
-# DASHBOARD INFORMATIVO
+# DASHBOARD
 # =========================
 
 @app.route("/dashboard")
@@ -395,7 +390,7 @@ def dashboard():
 
 
 # =========================
-# MOVIMIENTOS / VENTAS
+# VENTAS / CRÉDITOS / PRÉSTAMOS
 # =========================
 
 @app.route("/ventas", methods=["GET", "POST"])
@@ -409,8 +404,7 @@ def ventas():
     if request.method == "POST":
         producto_id = request.form.get("producto_id")
         tipo_movimiento = request.form.get("tipo_movimiento")
-        amount_input = request.form.get("cantidad")
-        cantidad = int(amount_input) if amount_input else 1
+        cantidad = int(request.form.get("cantidad") or 1)
 
         producto = Producto.query.get_or_404(producto_id)
 
@@ -425,8 +419,10 @@ def ventas():
 
             if tipo_movimiento == "vendido":
                 producto.estado = "vendido"
+
             elif tipo_movimiento == "credito":
                 producto.estado = "credito"
+
             elif tipo_movimiento == "prestado":
                 producto.estado = "prestado"
 
@@ -442,6 +438,7 @@ def ventas():
             )
 
             db.session.commit()
+
             mensaje = f"Movimiento registrado correctamente. Cantidad: {cantidad}"
 
     productos = Producto.query.filter(Producto.stock > 0).all()
@@ -500,7 +497,7 @@ def devolver_prestamo(id):
 
 
 # =========================
-# IMPORTAR DESDE EXCEL
+# EXCEL
 # =========================
 
 @app.route("/excel", methods=["GET", "POST"])
@@ -521,6 +518,7 @@ def excel():
             hoja = workbook.active
 
             encabezados = []
+
             for celda in hoja[1]:
                 encabezados.append(str(celda.value).strip().lower())
 
@@ -560,22 +558,22 @@ def excel():
                 total_cargados += 1
 
             db.session.commit()
+
             mensaje = f"Se cargaron {total_cargados} productos correctamente."
 
     return render_template("excel.html", mensaje=mensaje)
 
 
 # =========================
-# INICIALIZACIÓN AUTOMÁTICA
+# CREAR TABLAS
 # =========================
 
-# Esto creará las tablas automáticamente en MySQL (Railway) o SQLite (Local)
 with app.app_context():
     db.create_all()
 
 
 # =========================
-# EJECUCIÓN DEL SERVIDOR
+# RUN
 # =========================
 
 if __name__ == "__main__":
