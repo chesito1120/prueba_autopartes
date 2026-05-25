@@ -6,12 +6,17 @@ import os
 
 app = Flask(__name__)
 
+# Llave secreta segura para producción
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
 # =========================
-# BASE DE DATOS
+# CONFIGURACIÓN DE BASE DE DATOS
 # =========================
 
+# 1. Intentar obtener la URL directa (Estándar de Railway)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# 2. Intentar obtener variables individuales por si acaso
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
 DB_HOST = os.getenv("MYSQLHOST")
@@ -20,17 +25,28 @@ DB_NAME = os.getenv("MYSQLDATABASE")
 
 EN_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
-if all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-    DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
+if DATABASE_URL:
+    # Ajuste por si Railway entrega la URL con 'mysql://' (SQLAlchemy requiere 'mysql+pymysql://')
+    if DATABASE_URL.startswith("mysql://"):
+        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
+elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+    DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD_SAFE}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
 elif EN_RAILWAY:
-    raise RuntimeError("Faltan variables de base de datos en Railway")
+    # Mensaje descriptivo por si olvidaste vincular la base de datos en Railway
+    raise RuntimeError(
+        "Error: Estás en Railway pero no se detectó 'DATABASE_URL' ni las variables de MySQL. "
+        "Asegúrate de conectar un servicio de Base de Datos a esta aplicación."
+    )
 
 else:
+    # Respaldo local
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes_local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -63,7 +79,6 @@ USUARIOS = {
 
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-
     marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
     anio = db.Column(db.Integer)
@@ -267,7 +282,6 @@ def ajustar_stock(id):
 
     if request.method == "POST":
         nuevo_stock = int(request.form.get("stock") or 0)
-
         producto.stock = nuevo_stock
 
         if producto.stock > 0:
@@ -394,7 +408,8 @@ def ventas():
     if request.method == "POST":
         producto_id = request.form.get("producto_id")
         tipo_movimiento = request.form.get("tipo_movimiento")
-        cantidad = int(request.form.get("cantidad") or 1)
+        amount_input = request.form.get("cantidad")
+        cantidad = int(amount_input) if amount_input else 1
 
         producto = Producto.query.get_or_404(producto_id)
 
@@ -409,10 +424,8 @@ def ventas():
 
             if tipo_movimiento == "vendido":
                 producto.estado = "vendido"
-
             elif tipo_movimiento == "credito":
                 producto.estado = "credito"
-
             elif tipo_movimiento == "prestado":
                 producto.estado = "prestado"
 
@@ -428,7 +441,6 @@ def ventas():
             )
 
             db.session.commit()
-
             mensaje = f"Movimiento registrado correctamente. Cantidad: {cantidad}"
 
     productos = Producto.query.filter(Producto.stock > 0).all()
@@ -508,7 +520,6 @@ def excel():
             hoja = workbook.active
 
             encabezados = []
-
             for celda in hoja[1]:
                 encabezados.append(str(celda.value).strip().lower())
 
@@ -548,14 +559,13 @@ def excel():
                 total_cargados += 1
 
             db.session.commit()
-
             mensaje = f"Se cargaron {total_cargados} productos correctamente."
 
     return render_template("excel.html", mensaje=mensaje)
 
 
 # =========================
-# CREAR TABLAS
+# CREAR TABLAS AUTOMÁTICAMENTE
 # =========================
 
 with app.app_context():
@@ -563,7 +573,7 @@ with app.app_context():
 
 
 # =========================
-# RUN
+# EJECUCIÓN
 # =========================
 
 if __name__ == "__main__":
