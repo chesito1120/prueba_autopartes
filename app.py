@@ -11,34 +11,28 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 # =========================
 # BASE DE DATOS
 # =========================
-# =========================
-# BASE DE DATOS
-# =========================
 
 MYSQL_URL = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL")
 
 DB_USER = os.getenv("MYSQLUSER")
-DB_PASSWORD = os.getenv("MYSQLPASSWORD", "")
+DB_PASSWORD = os.getenv("MYSQLPASSWORD")
 DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
-DB_NAME = os.getenv("MYSQLDATABASE") or "railway"
+DB_NAME = os.getenv("MYSQLDATABASE")
 
 print("========== DB DEBUG ==========")
 print("MYSQL_URL existe:", bool(MYSQL_URL))
 print("MYSQLUSER existe:", bool(DB_USER))
-print("MYSQLPASSWORD existe:", DB_PASSWORD is not None)
+print("MYSQLPASSWORD existe:", bool(DB_PASSWORD))
 print("MYSQLHOST existe:", bool(DB_HOST))
 print("MYSQLPORT existe:", bool(DB_PORT))
-print("MYSQLDATABASE:", DB_NAME)
+print("MYSQLDATABASE existe:", bool(DB_NAME))
 print("==============================")
 
 if MYSQL_URL:
-    if MYSQL_URL.startswith("mysql://"):
-        MYSQL_URL = MYSQL_URL.replace("mysql://", "mysql+pymysql://", 1)
-
     app.config["SQLALCHEMY_DATABASE_URI"] = MYSQL_URL
 
-elif all([DB_USER, DB_HOST, DB_PORT, DB_NAME]):
+elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = (
