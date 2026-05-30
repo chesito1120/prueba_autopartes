@@ -11,43 +11,159 @@
 <body>
 
 <div class="contenedor">
-    <form method="POST">
+
+    <form method="POST" enctype="multipart/form-data">
+
         <h2>Editar Autoparte</h2>
 
         <div class="form-grid">
 
-            <input type="text" name="marca" placeholder="Marca" value="{{ producto.marca or '' }}">
+            <input
+                type="text"
+                name="marca"
+                placeholder="Marca"
+                value="{{ producto.marca or '' }}"
+            >
 
-            <input type="text" name="modelo" placeholder="Modelo" value="{{ producto.modelo or '' }}">
+            <input
+                type="text"
+                name="modelo"
+                placeholder="Modelo"
+                value="{{ producto.modelo or '' }}"
+            >
 
-            <input type="number" name="anio" placeholder="Año" value="{{ producto.anio or '' }}">
+            <input
+                type="number"
+                name="anio"
+                placeholder="Año"
+                value="{{ producto.anio or '' }}"
+            >
 
-            <input type="text" name="autoparte" placeholder="Autoparte / Pieza" value="{{ producto.autoparte or '' }}">
+            <input
+                type="text"
+                name="autoparte"
+                placeholder="Autoparte / Pieza"
+                value="{{ producto.autoparte or '' }}"
+            >
 
-            <input type="text" name="transmision" placeholder="Transmisión" value="{{ producto.transmision or '' }}">
+            <input
+                type="text"
+                name="transmision"
+                placeholder="Transmisión"
+                value="{{ producto.transmision or '' }}"
+            >
 
-            <input type="text" name="motor" placeholder="Motor" value="{{ producto.motor or '' }}">
+            <input
+                type="text"
+                name="motor"
+                placeholder="Motor"
+                value="{{ producto.motor or '' }}"
+            >
 
-            <input type="text" name="propiedad" placeholder="Propiedad / Dueño" value="{{ producto.propiedad or '' }}">
+            <input
+                type="text"
+                name="propiedad"
+                placeholder="Propiedad / Dueño"
+                value="{{ producto.propiedad or '' }}"
+            >
 
-            <input type="text" name="tipo" placeholder="Tipo" value="{{ producto.tipo or '' }}">
+            <input
+                type="text"
+                name="tipo"
+                placeholder="Tipo"
+                value="{{ producto.tipo or '' }}"
+            >
 
-            <input type="text" name="lado" placeholder="Lado" value="{{ producto.lado or '' }}">
+            <input
+                type="text"
+                name="lado"
+                placeholder="Lado"
+                value="{{ producto.lado or '' }}"
+            >
 
-            <input type="text" name="origen" placeholder="Origen" value="{{ producto.origen or '' }}">
+            <input
+                type="text"
+                name="origen"
+                placeholder="Origen"
+                value="{{ producto.origen or '' }}"
+            >
 
-            <input type="number" step="0.01" name="costo_venta" placeholder="Costo de venta" value="{{ producto.costo_venta or '' }}">
+            <input
+                type="number"
+                step="0.01"
+                name="costo_venta"
+                placeholder="Costo de venta"
+                value="{{ producto.costo_venta or '' }}"
+            >
 
-            <input type="text" name="link_ml" placeholder="Link Mercado Libre" value="{{ producto.link_ml or '' }}">
+            <input
+                type="text"
+                name="link_ml"
+                placeholder="Link Mercado Libre"
+                value="{{ producto.link_ml or '' }}"
+            >
 
-            <textarea name="observaciones" placeholder="Observaciones">{{ producto.observaciones or '' }}</textarea>
+            <textarea
+                name="observaciones"
+                placeholder="Observaciones"
+            >{{ producto.observaciones or '' }}</textarea>
 
         </div>
 
-        <button type="submit">Guardar cambios</button>
+        <!-- IMAGEN ACTUAL -->
 
-        <a href="/admin" class="volver">← Volver al panel</a>
+        {% if producto.foto %}
+
+        <div class="file-box">
+
+            <label>Imagen actual</label>
+
+            <br><br>
+
+            <img
+                src="{{ url_for('static', filename='uploads/' ~ producto.foto) }}"
+                alt="Imagen"
+                style="
+                    max-width:250px;
+                    border-radius:12px;
+                    border:1px solid #ddd;
+                "
+            >
+
+        </div>
+
+        {% endif %}
+
+        <!-- CAMBIAR IMAGEN -->
+
+        <div class="file-box">
+
+            <label>Cambiar o subir imagen</label>
+
+            <p>
+                Selecciona una imagen para reemplazar la foto actual.
+            </p>
+
+            <input
+                type="file"
+                name="foto"
+                accept="image/*"
+            >
+
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Guardar cambios
+        </button>
+
+        <a href="/inventario" class="volver">
+            ← Volver al inventario
+        </a>
+
     </form>
+
 </div>
 
 </body>

@@ -24,203 +24,154 @@ Carga Excel
     }
 
     .excel-layout {
-
         display: grid;
-
         grid-template-columns: 1.2fr 0.8fr;
-
         gap: 30px;
-
         align-items: start;
     }
 
     .excel-card {
-
         background: #e5e7eb;
-
         border-radius: 22px;
-
         padding: 35px;
-
         box-shadow: 0 10px 30px rgba(0,0,0,0.18);
     }
 
     .excel-card h2 {
-
         margin-bottom: 15px;
-
         color: #111827;
-
         font-size: 30px;
     }
 
     .excel-card p {
-
         color: #374151;
-
         margin-bottom: 25px;
-
         line-height: 1.6;
     }
 
     .upload-zone {
-
         border: 3px dashed #0ea5e9;
-
         background: #f8fafc;
-
         border-radius: 18px;
-
-        padding: 45px;
-
+        padding: 35px;
         text-align: center;
-
         margin-bottom: 25px;
-
         transition: 0.25s;
     }
 
     .upload-zone:hover {
-
         background: #eff6ff;
     }
 
     .upload-zone input {
-
         margin-top: 20px;
     }
 
+    .upload-zone.zip {
+        border-color: #1e3a8a;
+        background: #eef2ff;
+    }
+
     .btn-upload {
-
         width: 100%;
-
         padding: 16px;
-
         border: none;
-
         border-radius: 14px;
-
         background: linear-gradient(90deg, #2563eb, #0ea5e9);
-
         color: white;
-
         font-size: 16px;
-
         font-weight: bold;
-
         cursor: pointer;
-
         transition: 0.25s;
     }
 
     .btn-upload:hover {
-
         transform: translateY(-2px);
-
         opacity: 0.95;
     }
 
+    .mensaje-exito {
+        background: #dcfce7;
+        color: #166534;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+
     .columnas-card {
-
         background: #dbeafe;
-
         border-radius: 18px;
-
         padding: 25px;
     }
 
     .columnas-card h3 {
-
         margin-bottom: 18px;
-
         color: #1e3a8a;
     }
 
     .columnas-grid {
-
         display: grid;
-
         grid-template-columns: repeat(2, 1fr);
-
         gap: 12px;
     }
 
     .columna-item {
-
         background: white;
-
         padding: 12px 14px;
-
         border-radius: 12px;
-
         font-weight: bold;
-
         color: #374151;
-
         border-left: 5px solid #0ea5e9;
     }
 
+    .columna-foto {
+        border-left: 5px solid #1e3a8a;
+        background: #eff6ff;
+    }
+
     .tips-card {
-
         background: linear-gradient(180deg, #111827, #1e3a8a);
-
         color: white;
-
         border-radius: 22px;
-
         padding: 35px;
-
         box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     }
 
     .tips-card h2 {
-
         margin-bottom: 20px;
-
         font-size: 28px;
     }
 
     .tip {
-
         background: rgba(255,255,255,0.08);
-
         padding: 18px;
-
         border-radius: 16px;
-
         margin-bottom: 18px;
-
         line-height: 1.6;
     }
 
     .tip strong {
-
         color: #38bdf8;
     }
 
     @media (max-width: 1100px) {
-
         .excel-layout {
-
             grid-template-columns: 1fr;
         }
     }
 
     @media (max-width: 768px) {
-
         .excel-header h1 {
-
             font-size: 30px;
         }
 
         .columnas-grid {
-
             grid-template-columns: 1fr;
         }
 
         .excel-card,
         .tips-card {
-
             padding: 25px;
         }
     }
@@ -232,33 +183,36 @@ Carga Excel
     <h1>Carga masiva por Excel</h1>
 
     <p>
-        Sube archivos de inventario para registrar cientos de piezas automáticamente.
+        Sube el archivo Excel y un ZIP con las imágenes para registrar piezas automáticamente.
     </p>
 
 </div>
 
 <div class="excel-layout">
 
-    <!-- IZQUIERDA -->
-
     <div class="excel-card">
 
-        <h2>Subir archivo Excel</h2>
+        <h2>Subir inventario</h2>
 
         <p>
-            El sistema leerá automáticamente todas las piezas del archivo y las agregará al inventario.
+            Primero selecciona el Excel con los datos. Después selecciona un archivo ZIP con las fotos.
+            Los nombres de las fotos deben coincidir con las columnas foto1, foto2, foto3, foto4 y foto5.
         </p>
+
+        {% if mensaje %}
+            <div class="mensaje-exito">
+                {{ mensaje }}
+            </div>
+        {% endif %}
 
         <form method="POST" enctype="multipart/form-data">
 
             <div class="upload-zone">
 
-                <h3>
-                    Arrastra tu archivo aquí
-                </h3>
+                <h3>Archivo Excel</h3>
 
                 <p>
-                    o selecciónalo manualmente
+                    Selecciona el archivo .xlsx con la información de las autopartes.
                 </p>
 
                 <input
@@ -270,10 +224,24 @@ Carga Excel
 
             </div>
 
+            <div class="upload-zone zip">
+
+                <h3>ZIP de imágenes</h3>
+
+                <p>
+                    Selecciona un archivo .zip con todas las imágenes de las autopartes.
+                </p>
+
+                <input
+                    type="file"
+                    name="imagenes_zip"
+                    accept=".zip"
+                >
+
+            </div>
+
             <button class="btn-upload" type="submit">
-
-                Cargar inventario
-
+                Cargar inventario con imágenes
             </button>
 
         </form>
@@ -298,7 +266,15 @@ Carga Excel
                 <div class="columna-item">lado</div>
                 <div class="columna-item">origen</div>
                 <div class="columna-item">costo de venta</div>
-                <div class="columna-item">foto</div>
+
+                <div class="columna-item columna-foto">foto1</div>
+                <div class="columna-item columna-foto">foto2</div>
+                <div class="columna-item columna-foto">foto3</div>
+                <div class="columna-item columna-foto">foto4</div>
+                <div class="columna-item columna-foto">foto5</div>
+
+                <div class="columna-item">link mercado libre</div>
+                <div class="columna-item">stock</div>
                 <div class="columna-item">seccion de las ventas y comentarios</div>
                 <div class="columna-item">metodo de pago</div>
                 <div class="columna-item">factura</div>
@@ -311,8 +287,6 @@ Carga Excel
 
     </div>
 
-    <!-- DERECHA -->
-
     <div class="tips-card">
 
         <h2>Recomendaciones</h2>
@@ -323,18 +297,18 @@ Carga Excel
         </div>
 
         <div class="tip">
-            <strong>✔ Carga masiva rápida</strong><br>
-            Puedes subir cientos de piezas en segundos desde un solo archivo.
+            <strong>✔ Fotos separadas del Excel</strong><br>
+            No pegues imágenes dentro del Excel. Coloca solo el nombre del archivo, por ejemplo: faro1.jpg.
         </div>
 
         <div class="tip">
-            <strong>✔ Inventario automático</strong><br>
-            Las piezas quedarán disponibles automáticamente en catálogo e inventario.
+            <strong>✔ Comprime las fotos en ZIP</strong><br>
+            Todas las imágenes deben ir dentro de un archivo .zip y sus nombres deben coincidir con foto1 a foto5.
         </div>
 
         <div class="tip">
-            <strong>✔ Compatible con vendedores</strong><br>
-            El sistema actualizará stock, ventas, créditos y préstamos automáticamente.
+            <strong>✔ Hasta 5 fotos por artículo</strong><br>
+            Puedes llenar foto1, foto2, foto3, foto4 y foto5 por cada autoparte.
         </div>
 
     </div>

@@ -2,7 +2,10 @@ from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from openpyxl import load_workbook
 from urllib.parse import quote_plus
+from werkzeug.utils import secure_filename
 import os
+import uuid
+import zipfile
 
 app = Flask(__name__)
 
@@ -48,6 +51,94 @@ app.config["UPLOAD_FOLDER"] = "static/uploads"
 
 db = SQLAlchemy(app)
 
+
+# =========================
+# FUNCIONES DE IMAGEN
+# =========================
+
+def guardar_imagen(archivo):
+    if not archivo or not archivo.filename:
+        return ""
+
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    nombre_original = secure_filename(archivo.filename)
+    extension = nombre_original.rsplit(".", 1)[-1].lower()
+
+    if extension not in ["jpg", "jpeg", "png", "webp"]:
+        return ""
+
+    nombre_archivo = f"{uuid.uuid4().hex}.{extension}"
+    ruta = os.path.join(app.config["UPLOAD_FOLDER"], nombre_archivo)
+
+    archivo.save(ruta)
+
+    return nombre_archivo
+
+
+def guardar_varias_imagenes(archivos):
+    fotos = []
+
+    for archivo in archivos:
+        if archivo and archivo.filename:
+            nombre = guardar_imagen(archivo)
+
+            if nombre:
+                fotos.append(nombre)
+
+        if len(fotos) == 5:
+            break
+
+    return "|".join(fotos)
+
+
+def extraer_zip_imagenes(archivo_zip):
+    imagenes_extraidas = set()
+
+    if not archivo_zip or not archivo_zip.filename:
+        return imagenes_extraidas
+
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    nombre_zip = secure_filename(archivo_zip.filename)
+    ruta_zip = os.path.join(app.config["UPLOAD_FOLDER"], nombre_zip)
+
+    archivo_zip.save(ruta_zip)
+
+    try:
+        with zipfile.ZipFile(ruta_zip, "r") as zip_ref:
+            for archivo in zip_ref.namelist():
+                nombre_archivo = os.path.basename(archivo)
+
+                if not nombre_archivo:
+                    continue
+
+                nombre_seguro = secure_filename(nombre_archivo)
+
+                if "." not in nombre_seguro:
+                    continue
+
+                extension = nombre_seguro.rsplit(".", 1)[-1].lower()
+
+                if extension not in ["jpg", "jpeg", "png", "webp"]:
+                    continue
+
+                ruta_destino = os.path.join(app.config["UPLOAD_FOLDER"], nombre_seguro)
+
+                with zip_ref.open(archivo) as origen, open(ruta_destino, "wb") as destino:
+                    destino.write(origen.read())
+
+                imagenes_extraidas.add(nombre_seguro)
+
+    except zipfile.BadZipFile:
+        print("ERROR: El archivo subido no es un ZIP válido.")
+
+    if os.path.exists(ruta_zip):
+        os.remove(ruta_zip)
+
+    return imagenes_extraidas
+
+
 # =========================
 # USUARIOS TEMPORALES
 # =========================
@@ -66,6 +157,7 @@ USUARIOS = {
         "rol": "cliente"
     }
 }
+
 
 # =========================
 # MODELO
@@ -160,14 +252,12 @@ def admin():
         return redirect("/login")
 
     if request.method == "POST":
-        archivo = request.files.get("imagen") or request.files.get("foto")
-        nombre_archivo = ""
+        archivos = request.files.getlist("fotos")
+        nombre_archivo = guardar_varias_imagenes(archivos)
 
-        if archivo and archivo.filename:
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-            nombre_archivo = archivo.filename
-            ruta = os.path.join(app.config["UPLOAD_FOLDER"], nombre_archivo)
-            archivo.save(ruta)
+        if not nombre_archivo:
+            archivo = request.files.get("imagen") or request.files.get("foto")
+            nombre_archivo = guardar_imagen(archivo)
 
         nuevo = Producto(
             marca=request.form.get("marca"),
@@ -254,6 +344,18 @@ def editar(id):
         )
         producto.link_ml = request.form.get("link_ml")
 
+        archivos = request.files.getlist("fotos")
+        nuevas_fotos = guardar_varias_imagenes(archivos)
+
+        if nuevas_fotos:
+            producto.foto = nuevas_fotos
+        else:
+            archivo = request.files.get("foto")
+
+            if archivo and archivo.filename:
+                nombre_archivo = guardar_imagen(archivo)
+                producto.foto = nombre_archivo
+
         db.session.commit()
 
         return redirect("/inventario")
@@ -338,11 +440,36 @@ def marcar_disponible(id):
 
 @app.route("/eliminar/<int:id>")
 def eliminar(id):
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
     producto = Producto.query.get_or_404(id)
+
     db.session.delete(producto)
     db.session.commit()
+
     return redirect("/inventario")
 
+
+@app.route("/eliminar_masivo", methods=["POST"])
+def eliminar_masivo():
+
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    ids = request.form.getlist("productos")
+
+    if ids:
+
+        Producto.query.filter(
+            Producto.id.in_(ids)
+        ).delete(
+            synchronize_session=False
+        )
+
+        db.session.commit()
+
+    return redirect("/inventario")
 
 # =========================
 # DASHBOARD
@@ -513,6 +640,14 @@ def excel():
             or request.files.get("excel")
         )
 
+        archivo_zip = (
+            request.files.get("imagenes_zip")
+            or request.files.get("zip")
+            or request.files.get("imagenes")
+        )
+
+        imagenes_disponibles = extraer_zip_imagenes(archivo_zip)
+
         if archivo and archivo.filename:
             workbook = load_workbook(archivo)
             hoja = workbook.active
@@ -520,7 +655,8 @@ def excel():
             encabezados = []
 
             for celda in hoja[1]:
-                encabezados.append(str(celda.value).strip().lower())
+                encabezado = str(celda.value or "").strip().lower()
+                encabezados.append(encabezado)
 
             total_cargados = 0
 
@@ -530,10 +666,25 @@ def excel():
                 if not datos.get("autoparte") and not datos.get("marca"):
                     continue
 
+                fotos_excel = []
+
+                for campo in ["foto", "foto1", "foto2", "foto3", "foto4", "foto5"]:
+                    nombre_foto = datos.get(campo)
+
+                    if nombre_foto:
+                        nombre_foto = secure_filename(str(nombre_foto).strip())
+
+                        if nombre_foto:
+                            if not imagenes_disponibles or nombre_foto in imagenes_disponibles:
+                                fotos_excel.append(nombre_foto)
+
+                    if len(fotos_excel) == 5:
+                        break
+
                 nuevo = Producto(
                     marca=datos.get("marca"),
                     modelo=datos.get("modelo"),
-                    anio=int(datos.get("año") or 0),
+                    anio=int(datos.get("año") or datos.get("anio") or 0),
                     observaciones=datos.get("observaciones"),
                     transmision=datos.get("transmision"),
                     motor=datos.get("motor"),
@@ -542,9 +693,9 @@ def excel():
                     tipo=datos.get("tipo"),
                     lado=datos.get("lado"),
                     origen=datos.get("origen"),
-                    costo_venta=float(datos.get("costo de venta") or 0),
-                    foto=datos.get("foto") or "",
-                    link_ml=datos.get("link mercado libre"),
+                    costo_venta=float(datos.get("costo de venta") or datos.get("costo_venta") or 0),
+                    foto="|".join(fotos_excel),
+                    link_ml=datos.get("link mercado libre") or datos.get("link_ml"),
                     stock=int(datos.get("stock") or 1),
                     estado="disponible",
                     comentarios_venta=datos.get("seccion de las ventas y comentarios"),

@@ -43,7 +43,7 @@ Inventario
     .inventario-card table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1100px;
+        min-width: 1200px;
     }
 
     .inventario-card th {
@@ -122,12 +122,23 @@ Inventario
         background: #16a34a;
     }
 
-    .btn-restar {
-        background: #2563eb;
-    }
-
     .btn-eliminar {
         background: #dc2626;
+    }
+
+    .btn-eliminar-masivo {
+        background: #b91c1c;
+        color: white;
+        border: none;
+        padding: 14px 22px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .checkbox-producto {
+        transform: scale(1.2);
     }
 </style>
 
@@ -144,11 +155,31 @@ Inventario
     onkeyup="buscarProducto()"
 >
 
+<form
+    method="POST"
+    action="/eliminar_masivo"
+    onsubmit="return confirm('¿Seguro que deseas eliminar todos los artículos seleccionados?')"
+>
+
+<button
+    type="submit"
+    class="btn-eliminar-masivo"
+>
+    🗑 Eliminar seleccionados
+</button>
+
 <div class="inventario-card">
 
     <table id="tablaInventario">
 
         <tr>
+            <th>
+                <input
+                    type="checkbox"
+                    id="checkTodos"
+                >
+            </th>
+
             <th>Foto</th>
             <th>Marca</th>
             <th>Modelo</th>
@@ -166,10 +197,19 @@ Inventario
         <tr>
 
             <td>
+                <input
+                    type="checkbox"
+                    name="productos"
+                    value="{{ producto.id }}"
+                    class="checkbox-producto"
+                >
+            </td>
+
+            <td>
                 {% if producto.foto %}
                     <img
                         class="inventario-img"
-                        src="{{ url_for('static', filename='uploads/' ~ producto.foto) }}"
+                        src="{{ url_for('static', filename='uploads/' ~ producto.foto.split('|')[0]) }}"
                         alt="{{ producto.autoparte }}"
                     >
                 {% else %}
@@ -178,17 +218,11 @@ Inventario
             </td>
 
             <td>{{ producto.marca or '-' }}</td>
-
             <td>{{ producto.modelo or '-' }}</td>
-
             <td>{{ producto.anio or '-' }}</td>
-
             <td>{{ producto.autoparte or '-' }}</td>
-
             <td>{{ producto.propiedad or '-' }}</td>
-
             <td>{{ producto.stock or 0 }}</td>
-
             <td>${{ producto.costo_venta or 0 }}</td>
 
             <td>
@@ -200,27 +234,38 @@ Inventario
             </td>
 
             <td>
+
                 <div class="acciones-inventario">
 
-    <a href="/editar/{{ producto.id }}">
-        <button class="btn-mini btn-editar">
-            Editar
-        </button>
-    </a>
+                    <a href="/editar/{{ producto.id }}">
+                        <button
+                            type="button"
+                            class="btn-mini btn-editar"
+                        >
+                            Editar
+                        </button>
+                    </a>
 
-    <a href="/stock/{{ producto.id }}">
-        <button class="btn-mini btn-sumar">
-            Stock
-        </button>
-    </a>
+                    <a href="/stock/{{ producto.id }}">
+                        <button
+                            type="button"
+                            class="btn-mini btn-sumar"
+                        >
+                            Stock
+                        </button>
+                    </a>
 
-    <a href="/eliminar/{{ producto.id }}">
-        <button class="btn-mini btn-eliminar">
-            Eliminar
-        </button>
-    </a>
+                    <a href="/eliminar/{{ producto.id }}">
+                        <button
+                            type="button"
+                            class="btn-mini btn-eliminar"
+                        >
+                            Eliminar
+                        </button>
+                    </a>
 
-</div>
+                </div>
+
             </td>
 
         </tr>
@@ -231,17 +276,44 @@ Inventario
 
 </div>
 
+</form>
+
 <script>
+
 function buscarProducto() {
+
     let input = document.getElementById("buscador").value.toLowerCase();
+
     let tabla = document.getElementById("tablaInventario");
+
     let filas = tabla.getElementsByTagName("tr");
 
     for (let i = 1; i < filas.length; i++) {
+
         let texto = filas[i].innerText.toLowerCase();
-        filas[i].style.display = texto.includes(input) ? "" : "none";
+
+        filas[i].style.display =
+            texto.includes(input)
+            ? ""
+            : "none";
     }
 }
+
+document
+.getElementById("checkTodos")
+.addEventListener("change", function() {
+
+    let checks =
+        document.querySelectorAll(
+            'input[name="productos"]'
+        );
+
+    checks.forEach(check => {
+        check.checked = this.checked;
+    });
+
+});
+
 </script>
 
 {% endblock %}
