@@ -26,9 +26,50 @@ Inventario
         padding: 14px;
         border-radius: 10px;
         border: none;
-        margin-bottom: 25px;
+        margin-bottom: 18px;
         background: #111827;
         color: white;
+    }
+
+    .acciones-superiores {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .btn-agregar-producto {
+        display: inline-block;
+        background: #16a34a;
+        color: white;
+        padding: 14px 22px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: bold;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+        transition: 0.25s;
+    }
+
+    .btn-agregar-producto:hover {
+        background: #15803d;
+        transform: translateY(-2px);
+    }
+
+    .btn-eliminar-masivo {
+        background: #b91c1c;
+        color: white;
+        border: none;
+        padding: 14px 22px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+        transition: 0.25s;
+    }
+
+    .btn-eliminar-masivo:hover {
+        background: #991b1b;
+        transform: translateY(-2px);
     }
 
     .inventario-card {
@@ -126,19 +167,20 @@ Inventario
         background: #dc2626;
     }
 
-    .btn-eliminar-masivo {
-        background: #b91c1c;
-        color: white;
-        border: none;
-        padding: 14px 22px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
-
     .checkbox-producto {
         transform: scale(1.2);
+    }
+
+    @media (max-width: 768px) {
+        .acciones-superiores {
+            flex-direction: column;
+        }
+
+        .btn-agregar-producto,
+        .btn-eliminar-masivo {
+            width: 100%;
+            text-align: center;
+        }
     }
 </style>
 
@@ -158,15 +200,23 @@ Inventario
 <form
     method="POST"
     action="/eliminar_masivo"
-    onsubmit="return confirm('¿Seguro que deseas eliminar todos los artículos seleccionados?')"
+    onsubmit="return validarEliminacionMasiva()"
 >
 
-<button
-    type="submit"
-    class="btn-eliminar-masivo"
->
-    🗑 Eliminar seleccionados
-</button>
+<div class="acciones-superiores">
+
+    <a href="/admin" class="btn-agregar-producto">
+        + Agregar autoparte
+    </a>
+
+    <button
+        type="submit"
+        class="btn-eliminar-masivo"
+    >
+        🗑 Eliminar seleccionados
+    </button>
+
+</div>
 
 <div class="inventario-card">
 
@@ -259,6 +309,7 @@ Inventario
                         <button
                             type="button"
                             class="btn-mini btn-eliminar"
+                            onclick="return confirm('¿Seguro que deseas eliminar este artículo?')"
                         >
                             Eliminar
                         </button>
@@ -313,6 +364,25 @@ document
     });
 
 });
+
+function validarEliminacionMasiva() {
+
+    let seleccionados =
+        document.querySelectorAll(
+            'input[name="productos"]:checked'
+        );
+
+    if (seleccionados.length === 0) {
+        alert("Selecciona al menos un artículo para eliminar.");
+        return false;
+    }
+
+    return confirm(
+        "¿Seguro que deseas eliminar " +
+        seleccionados.length +
+        " artículo(s) seleccionados?"
+    );
+}
 
 </script>
 

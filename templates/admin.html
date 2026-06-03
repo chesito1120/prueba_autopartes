@@ -9,6 +9,67 @@
     <meta name="theme-color" content="#b30000">
     <link rel="icon" href="/static/icons/icon-192.png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .file-box-admin {
+            background: #f3f4f6;
+            border: 2px dashed #9ca3af;
+            border-radius: 14px;
+            padding: 18px;
+            margin-top: 10px;
+        }
+
+        .file-box-admin label {
+            display: block;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .file-box-admin p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .file-box-admin input[type="file"] {
+            width: 100%;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+        }
+
+        .preview-fotos {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .preview-fotos img {
+            width: 90px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+        }
+
+        .foto-tabla {
+            width: 90px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .varias-fotos {
+            display: inline-block;
+            margin-top: 5px;
+            color: #16a34a;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
@@ -20,6 +81,8 @@
 
 <div class="acciones">
     <a href="/"><button class="btn gris">Ver Catálogo</button></a>
+    <a href="/inventario"><button class="btn gris">Ver Inventario</button></a>
+    <a href="/excel"><button class="btn gris">Carga Excel</button></a>
     <a href="/logout"><button class="btn rojo">Cerrar Sesión</button></a>
 </div>
 
@@ -68,7 +131,23 @@
 
             <textarea name="observaciones" placeholder="Observaciones"></textarea>
 
-            <input class="full" type="file" name="foto">
+            <div class="full file-box-admin">
+                <label>Fotografías de la autoparte</label>
+
+                <p>
+                    Puedes seleccionar de 1 a 5 fotografías. Estas imágenes se mostrarán como carrusel en el catálogo.
+                </p>
+
+                <input
+                    type="file"
+                    name="fotos"
+                    accept="image/*"
+                    multiple
+                    onchange="previewFotos(event)"
+                >
+
+                <div id="previewFotos" class="preview-fotos"></div>
+            </div>
 
         </div>
 
@@ -100,9 +179,24 @@
         <tr>
             <td>
                 {% if producto.foto %}
-                    <img src="{{ url_for('static', filename='uploads/' + producto.foto) }}" alt="{{ producto.autoparte }}">
+
+                    <img
+                        class="foto-tabla"
+                        src="{{ url_for('static', filename='uploads/' ~ producto.foto.split('|')[0]) }}"
+                        alt="{{ producto.autoparte }}"
+                    >
+
+                    {% if '|' in producto.foto %}
+                        <br>
+                        <span class="varias-fotos">
+                            Varias fotos
+                        </span>
+                    {% endif %}
+
                 {% else %}
+
                     Sin foto
+
                 {% endif %}
             </td>
 
@@ -149,7 +243,12 @@
                     {% endif %}
 
                     <a href="/eliminar/{{ producto.id }}">
-                        <button class="btn rojo">Eliminar</button>
+                        <button
+                            class="btn rojo"
+                            onclick="return confirm('¿Seguro que deseas eliminar esta autoparte?')"
+                        >
+                            Eliminar
+                        </button>
                     </a>
 
                 </div>
@@ -160,6 +259,31 @@
 </div>
 
 <script>
+function previewFotos(event) {
+    const preview = document.getElementById("previewFotos");
+    preview.innerHTML = "";
+
+    const archivos = Array.from(event.target.files);
+
+    if (archivos.length > 5) {
+        alert("Solo puedes seleccionar máximo 5 fotografías.");
+        event.target.value = "";
+        return;
+    }
+
+    archivos.forEach(archivo => {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            preview.appendChild(img);
+        };
+
+        reader.readAsDataURL(archivo);
+    });
+}
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/static/service-worker.js');
 }

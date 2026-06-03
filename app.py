@@ -50,7 +50,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 
 db = SQLAlchemy(app)
-
+print("BASE DE DATOS ACTIVA:")
+print(app.config["SQLALCHEMY_DATABASE_URI"])
 
 # =========================
 # FUNCIONES DE IMAGEN
