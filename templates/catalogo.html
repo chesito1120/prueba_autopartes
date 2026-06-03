@@ -25,9 +25,42 @@
         header {
             background: linear-gradient(90deg, #111827, #0ea5e9);
             color: white;
-            padding: 35px 25px;
+            padding: 35px 25px 42px;
             text-align: center;
             position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: "";
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            width: 220px;
+            height: 220px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+            animation: moverLuz 7s ease-in-out infinite;
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            bottom: -90px;
+            right: -80px;
+            width: 260px;
+            height: 260px;
+            background: rgba(14,165,233,0.25);
+            border-radius: 50%;
+            animation: moverLuz2 8s ease-in-out infinite;
+        }
+
+        header h1,
+        header p,
+        .login-btn,
+        .logos-socios {
+            position: relative;
+            z-index: 2;
         }
 
         header h1 {
@@ -38,6 +71,81 @@
         header p {
             margin-top: 8px;
             color: #d1d5db;
+        }
+
+        .logos-socios {
+            margin-top: 26px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 34px;
+            flex-wrap: wrap;
+        }
+
+        .logo-socio {
+            background: rgba(255,255,255,0.95);
+            padding: 12px 22px;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            animation: flotarLogo 4s ease-in-out infinite;
+            transition: 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .logo-socio:hover {
+            transform: translateY(-8px) scale(1.06);
+            box-shadow: 0 18px 35px rgba(0,0,0,0.35);
+        }
+
+        .logo-socio img {
+            height: 62px;
+            max-width: 180px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .logo-socio:nth-child(2) {
+            animation-delay: 0.8s;
+        }
+
+        .logo-socio:nth-child(3) {
+            animation-delay: 1.6s;
+        }
+
+        @keyframes flotarLogo {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-8px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes moverLuz {
+            0% {
+                transform: translate(0, 0);
+            }
+            50% {
+                transform: translate(40px, 25px);
+            }
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        @keyframes moverLuz2 {
+            0% {
+                transform: translate(0, 0);
+            }
+            50% {
+                transform: translate(-45px, -20px);
+            }
+            100% {
+                transform: translate(0, 0);
+            }
         }
 
         .login-btn {
@@ -277,7 +385,7 @@
 
         @media (max-width: 768px) {
             header {
-                padding: 25px 15px 80px;
+                padding: 25px 15px 55px;
             }
 
             header h1 {
@@ -288,6 +396,20 @@
                 position: static;
                 display: inline-block;
                 margin-top: 18px;
+            }
+
+            .logos-socios {
+                gap: 18px;
+                margin-top: 24px;
+            }
+
+            .logo-socio {
+                padding: 10px 14px;
+            }
+
+            .logo-socio img {
+                height: 45px;
+                max-width: 130px;
             }
 
             .contenedor {
@@ -319,6 +441,31 @@
 
     <p>Refacciones disponibles para venta</p>
 
+    <div class="logos-socios">
+
+        <div class="logo-socio">
+            <img
+                src="{{ url_for('static', filename='img/socio1.jpeg') }}"
+                alt="Socio 1"
+            >
+        </div>
+
+        <div class="logo-socio">
+            <img
+                src="{{ url_for('static', filename='img/socio2.jpeg') }}"
+                alt="Socio 2"
+            >
+        </div>
+
+        <div class="logo-socio">
+            <img
+                src="{{ url_for('static', filename='img/socio3.jpeg') }}"
+                alt="Socio 3"
+            >
+        </div>
+
+    </div>
+
     <a href="/login" class="login-btn">
         Admin
     </a>
@@ -348,7 +495,7 @@
         {% if producto.foto %}
 
             <img
-                src="{{ url_for('static', filename='uploads/' ~ producto.foto) }}"
+                src="{{ url_for('static', filename='uploads/' ~ producto.foto.split('|')[0]) }}"
                 alt="{{ producto.autoparte }}"
             >
 
