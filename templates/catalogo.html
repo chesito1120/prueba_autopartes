@@ -116,9 +116,11 @@
             0% {
                 transform: translateY(0);
             }
+
             50% {
                 transform: translateY(-8px);
             }
+
             100% {
                 transform: translateY(0);
             }
@@ -128,9 +130,11 @@
             0% {
                 transform: translate(0, 0);
             }
+
             50% {
                 transform: translate(40px, 25px);
             }
+
             100% {
                 transform: translate(0, 0);
             }
@@ -140,9 +144,11 @@
             0% {
                 transform: translate(0, 0);
             }
+
             50% {
                 transform: translate(-45px, -20px);
             }
+
             100% {
                 transform: translate(0, 0);
             }
@@ -206,16 +212,90 @@
         .imagen-box {
             height: 260px;
             background: #d1d5db;
+            position: relative;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 18px;
         }
 
-        .imagen-box img {
+        .carousel-img {
+            display: none;
             max-width: 100%;
             max-height: 230px;
             object-fit: contain;
+            animation: fadeImagen 0.35s ease;
+        }
+
+        .carousel-img.activa {
+            display: block;
+        }
+
+        @keyframes fadeImagen {
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(17,24,39,0.78);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.25s;
+        }
+
+        .carousel-btn:hover {
+            background: #0ea5e9;
+            transform: translateY(-50%) scale(1.08);
+        }
+
+        .carousel-prev {
+            left: 12px;
+        }
+
+        .carousel-next {
+            right: 12px;
+        }
+
+        .carousel-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.65);
+            border: 1px solid rgba(17,24,39,0.25);
+        }
+
+        .dot.activo {
+            background: #0ea5e9;
         }
 
         .sin-foto {
@@ -490,14 +570,49 @@
 
 <div class="producto">
 
-    <div class="imagen-box">
+    <div class="imagen-box carousel-producto" data-index="0">
 
         {% if producto.foto %}
 
-            <img
-                src="{{ url_for('static', filename='uploads/' ~ producto.foto.split('|')[0]) }}"
-                alt="{{ producto.autoparte }}"
-            >
+            {% set fotos = producto.foto.split('|') %}
+
+            {% for foto in fotos %}
+
+                <img
+                    class="carousel-img {% if loop.first %}activa{% endif %}"
+                    src="{{ url_for('static', filename='uploads/' ~ foto) }}"
+                    alt="{{ producto.autoparte }}"
+                >
+
+            {% endfor %}
+
+            {% if fotos|length > 1 %}
+
+                <button
+                    class="carousel-btn carousel-prev"
+                    type="button"
+                    onclick="moverCarrusel(this, -1)"
+                >
+                    ‹
+                </button>
+
+                <button
+                    class="carousel-btn carousel-next"
+                    type="button"
+                    onclick="moverCarrusel(this, 1)"
+                >
+                    ›
+                </button>
+
+                <div class="carousel-dots">
+
+                    {% for foto in fotos %}
+                        <span class="dot {% if loop.first %}activo{% endif %}"></span>
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
 
         {% else %}
 
@@ -715,6 +830,46 @@ function buscarProducto() {
             ? ""
             : "none";
     }
+}
+
+function moverCarrusel(boton, direccion) {
+
+    let carousel =
+        boton.closest('.carousel-producto');
+
+    let imagenes =
+        carousel.querySelectorAll('.carousel-img');
+
+    let dots =
+        carousel.querySelectorAll('.dot');
+
+    let indexActual =
+        parseInt(carousel.getAttribute('data-index')) || 0;
+
+    imagenes[indexActual].classList.remove('activa');
+
+    if (dots.length > 0) {
+        dots[indexActual].classList.remove('activo');
+    }
+
+    let nuevoIndex =
+        indexActual + direccion;
+
+    if (nuevoIndex < 0) {
+        nuevoIndex = imagenes.length - 1;
+    }
+
+    if (nuevoIndex >= imagenes.length) {
+        nuevoIndex = 0;
+    }
+
+    imagenes[nuevoIndex].classList.add('activa');
+
+    if (dots.length > 0) {
+        dots[nuevoIndex].classList.add('activo');
+    }
+
+    carousel.setAttribute('data-index', nuevoIndex);
 }
 </script>
 
