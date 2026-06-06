@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios | Autopartes CH</title>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, Helvetica, sans-serif;
+        }
+
+        body{
+            background:#f4f6f9;
+            padding:30px;
+        }
+
+        .contenedor{
+            max-width:1400px;
+            margin:auto;
+        }
+
+        .titulo{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:25px;
+        }
+
+        .titulo h1{
+            color:#1f2937;
+        }
+
+        .btn{
+            border:none;
+            padding:12px 18px;
+            border-radius:10px;
+            cursor:pointer;
+            text-decoration:none;
+            font-weight:bold;
+        }
+
+        .btn-azul{
+            background:#2563eb;
+            color:white;
+        }
+
+        .btn-verde{
+            background:#16a34a;
+            color:white;
+        }
+
+        .btn-rojo{
+            background:#dc2626;
+            color:white;
+        }
+
+        .btn-gris{
+            background:#6b7280;
+            color:white;
+        }
+
+        .card{
+            background:white;
+            padding:25px;
+            border-radius:18px;
+            box-shadow:0 5px 15px rgba(0,0,0,.10);
+            margin-bottom:25px;
+        }
+
+        .card h2{
+            margin-bottom:20px;
+            color:#111827;
+        }
+
+        .grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:15px;
+        }
+
+        input,
+        select{
+            width:100%;
+            padding:12px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+        }
+
+        .tabla{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        .tabla th{
+            background:#111827;
+            color:white;
+            padding:12px;
+        }
+
+        .tabla td{
+            padding:12px;
+            border-bottom:1px solid #e5e7eb;
+            text-align:center;
+        }
+
+        .activo{
+            color:#16a34a;
+            font-weight:bold;
+        }
+
+        .inactivo{
+            color:#dc2626;
+            font-weight:bold;
+        }
+
+        .mensaje{
+            background:#dcfce7;
+            color:#166534;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+        }
+
+        .error{
+            background:#fee2e2;
+            color:#991b1b;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+        }
+
+        .acciones{
+            display:flex;
+            gap:8px;
+            justify-content:center;
+            flex-wrap:wrap;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="contenedor">
+
+    <div class="titulo">
+
+        <h1>Administración de Usuarios</h1>
+
+        <a href="/inventario" class="btn btn-gris">
+            ← Volver al Inventario
+        </a>
+
+    </div>
+
+    {% if mensaje %}
+        <div class="mensaje">
+            {{ mensaje }}
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <div class="card">
+
+        <h2>Crear Usuario</h2>
+
+        <form method="POST">
+
+            <div class="grid">
+
+                <input
+                    type="text"
+                    name="nombre"
+                    placeholder="Nombre completo"
+                    required
+                >
+
+                <input
+                    type="email"
+                    name="correo"
+                    placeholder="Correo electrónico"
+                    required
+                >
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Contraseña"
+                    required
+                >
+
+                <select name="rol">
+
+                    <option value="vendedor">
+                        Vendedor
+                    </option>
+
+                    <option value="admin">
+                        Administrador
+                    </option>
+
+                </select>
+
+            </div>
+
+            <br>
+
+            <button
+                type="submit"
+                class="btn btn-verde"
+            >
+                Crear Usuario
+            </button>
+
+        </form>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Usuarios Registrados</h2>
+
+        <table class="tabla">
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estatus</th>
+                    <th>Acciones</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% for usuario in usuarios %}
+
+                <tr>
+
+                    <td>{{ usuario.id }}</td>
+
+                    <td>{{ usuario.nombre }}</td>
+
+                    <td>{{ usuario.correo }}</td>
+
+                    <td>{{ usuario.rol }}</td>
+
+                    <td>
+
+                        {% if usuario.activo %}
+                            <span class="activo">
+                                Activo
+                            </span>
+                        {% else %}
+                            <span class="inactivo">
+                                Inactivo
+                            </span>
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        <div class="acciones">
+
+                            {% if usuario.activo %}
+
+                                <a
+                                    href="/usuarios/desactivar/{{ usuario.id }}"
+                                    class="btn btn-gris"
+                                >
+                                    Desactivar
+                                </a>
+
+                            {% else %}
+
+                                <a
+                                    href="/usuarios/activar/{{ usuario.id }}"
+                                    class="btn btn-verde"
+                                >
+                                    Activar
+                                </a>
+
+                            {% endif %}
+
+                            <a
+                                href="/usuarios/eliminar/{{ usuario.id }}"
+                                class="btn btn-rojo"
+                                onclick="return confirm('¿Eliminar usuario?')"
+                            >
+                                Eliminar
+                            </a>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

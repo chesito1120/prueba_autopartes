@@ -41,9 +41,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6b7280;
-            font-weight: bold;
-            text-align: center;
             overflow: hidden;
         }
 
@@ -102,6 +99,16 @@
             box-shadow: 0 10px 24px rgba(14,165,233,0.35);
         }
 
+        .mensaje-error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+
         .footer-text {
             margin-top: 24px;
             color: #94a3b8;
@@ -130,16 +137,32 @@
 <div class="login-card">
 
     <div class="logo-box">
-        <img src="{{ url_for('static', filename='img/socio3.jpeg') }}" alt="Logo"> 
-        LOGO
+        <img src="{{ url_for('static', filename='img/socio3.jpeg') }}" alt="Logo">
     </div>
 
     <h1>Sistema de Inventario</h1>
     <p>Autopartes CH · Ventas · Préstamos · Catálogo</p>
 
+    {% if error %}
+        <div class="mensaje-error">
+            {{ error }}
+        </div>
+    {% endif %}
+
     <form method="POST">
-        <input type="text" name="usuario" placeholder="Usuario" required>
-        <input type="password" name="password" placeholder="Contraseña" required>
+        <input
+            type="email"
+            name="correo"
+            placeholder="Correo electrónico"
+            required
+        >
+
+        <input
+            type="password"
+            name="password"
+            placeholder="Contraseña"
+            required
+        >
 
         <button type="submit">
             Iniciar sesión
@@ -147,7 +170,7 @@
     </form>
 
     <p class="footer-text">
-        Acceso exclusivo para administradores y vendedores
+        Acceso exclusivo para administradores y vendedores autorizados
     </p>
 
 </div>

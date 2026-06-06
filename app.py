@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from openpyxl import load_workbook
 from urllib.parse import quote_plus
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import zipfile
@@ -50,8 +51,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 
 db = SQLAlchemy(app)
+
 print("BASE DE DATOS ACTIVA:")
 print(app.config["SQLALCHEMY_DATABASE_URI"])
+
 
 # =========================
 # FUNCIONES DE IMAGEN
@@ -141,28 +144,18 @@ def extraer_zip_imagenes(archivo_zip):
 
 
 # =========================
-# USUARIOS TEMPORALES
+# MODELOS
 # =========================
 
-USUARIOS = {
-    "admin": {
-        "password": "123456",
-        "rol": "admin"
-    },
-    "vendedor": {
-        "password": "123456",
-        "rol": "vendedor"
-    },
-    "cliente": {
-        "password": "123456",
-        "rol": "cliente"
-    }
-}
+class Usuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
 
+    nombre = db.Column(db.String(150), nullable=False)
+    correo = db.Column(db.String(180), unique=True, nullable=False)
+    password_hash = db.Column(db.String(300), nullable=False)
+    rol = db.Column(db.String(50), default="vendedor")
+    activo = db.Column(db.Boolean, default=True)
 
-# =========================
-# MODELO
-# =========================
 
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -220,27 +213,136 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    error = None
+
     if request.method == "POST":
-        usuario = request.form.get("usuario")
-        password = request.form.get("password")
+        correo = (request.form.get("correo") or "").strip().lower()
+        password = request.form.get("password") or ""
 
-        if usuario in USUARIOS and USUARIOS[usuario]["password"] == password:
-            session["usuario"] = usuario
-            session["rol"] = USUARIOS[usuario]["rol"]
+        usuario = Usuario.query.filter_by(correo=correo).first()
 
-            if session["rol"] in ["admin", "vendedor"]:
+        if usuario and usuario.activo and check_password_hash(usuario.password_hash, password):
+            session["usuario"] = usuario.nombre
+            session["correo"] = usuario.correo
+            session["rol"] = usuario.rol
+
+            if usuario.rol in ["admin", "vendedor"]:
                 return redirect("/inventario")
 
-            if session["rol"] == "cliente":
-                return redirect("/")
+            return redirect("/")
 
-    return render_template("login.html")
+        error = "Correo o contraseña incorrectos."
+
+    return render_template("login.html", error=error)
 
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
+
+
+# =========================
+# USUARIOS
+# =========================
+
+@app.route("/usuarios", methods=["GET", "POST"])
+def usuarios():
+    if not session.get("rol"):
+        return redirect("/login")
+
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    mensaje = None
+    error = None
+
+    if request.method == "POST":
+        nombre = (request.form.get("nombre") or "").strip()
+        correo = (request.form.get("correo") or "").strip().lower()
+        password = request.form.get("password") or ""
+        rol = request.form.get("rol") or "vendedor"
+
+        if rol not in ["admin", "vendedor"]:
+            rol = "vendedor"
+
+        if not nombre or not correo or not password:
+            error = "Todos los campos son obligatorios."
+
+        elif Usuario.query.filter_by(correo=correo).first():
+            error = "Ese correo ya está registrado."
+
+        else:
+            nuevo_usuario = Usuario(
+                nombre=nombre,
+                correo=correo,
+                password_hash=generate_password_hash(password),
+                rol=rol,
+                activo=True
+            )
+
+            db.session.add(nuevo_usuario)
+            db.session.commit()
+
+            mensaje = "Usuario creado correctamente."
+
+    usuarios_lista = Usuario.query.order_by(Usuario.id.desc()).all()
+
+    return render_template(
+        "usuarios.html",
+        usuarios=usuarios_lista,
+        mensaje=mensaje,
+        error=error
+    )
+
+
+@app.route("/usuarios/desactivar/<int:id>")
+def desactivar_usuario(id):
+    if not session.get("rol"):
+        return redirect("/login")
+
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    usuario = Usuario.query.get_or_404(id)
+
+    if usuario.correo != session.get("correo"):
+        usuario.activo = False
+        db.session.commit()
+
+    return redirect("/usuarios")
+
+
+@app.route("/usuarios/activar/<int:id>")
+def activar_usuario(id):
+    if not session.get("rol"):
+        return redirect("/login")
+
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    usuario = Usuario.query.get_or_404(id)
+    usuario.activo = True
+    db.session.commit()
+
+    return redirect("/usuarios")
+
+
+@app.route("/usuarios/eliminar/<int:id>")
+def eliminar_usuario(id):
+    if not session.get("rol"):
+        return redirect("/login")
+
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    usuario = Usuario.query.get_or_404(id)
+
+    if usuario.correo != session.get("correo"):
+        db.session.delete(usuario)
+        db.session.commit()
+
+    return redirect("/usuarios")
 
 
 # =========================
@@ -454,14 +556,12 @@ def eliminar(id):
 
 @app.route("/eliminar_masivo", methods=["POST"])
 def eliminar_masivo():
-
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
     ids = request.form.getlist("productos")
 
     if ids:
-
         Producto.query.filter(
             Producto.id.in_(ids)
         ).delete(
@@ -472,14 +572,15 @@ def eliminar_masivo():
 
     return redirect("/inventario")
 
+
 # =========================
 # DASHBOARD
 # =========================
 
 @app.route("/dashboard")
 def dashboard():
-    if not session.get("rol") in ["admin", "vendedor"]:
-        return redirect("/login")
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
 
     productos = Producto.query.all()
 
@@ -717,11 +818,30 @@ def excel():
 
 
 # =========================
-# CREAR TABLAS
+# CREAR TABLAS Y ADMIN INICIAL
 # =========================
 
 with app.app_context():
     db.create_all()
+
+    if Usuario.query.count() == 0:
+        admin_inicial = Usuario(
+            nombre="Administrador",
+            correo=os.getenv("ADMIN_CORREO", "admin@autopartesch.com"),
+            password_hash=generate_password_hash(os.getenv("ADMIN_PASSWORD", "Admin12345")),
+            rol="admin",
+            activo=True
+        )
+
+        db.session.add(admin_inicial)
+        db.session.commit()
+
+        print("====================================")
+        print("ADMIN INICIAL CREADO")
+        print("Correo:", os.getenv("ADMIN_CORREO", "admin@autopartesch.com"))
+        print("Contraseña temporal:", os.getenv("ADMIN_PASSWORD", "Admin12345"))
+        print("CAMBIA ESTOS DATOS EN PRODUCCIÓN")
+        print("====================================")
 
 
 # =========================
