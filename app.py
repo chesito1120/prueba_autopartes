@@ -621,11 +621,42 @@ def dashboard():
     ).count()
 
     valor_total = 0
+    resumen_propiedades = {}
 
     for producto in productos:
         precio = producto.costo_venta or 0
         stock = producto.stock or 0
-        valor_total += precio * stock
+        valor_producto = precio * stock
+        valor_total += valor_producto
+
+        propiedad = (producto.propiedad or "SIN PROPIEDAD").strip().upper()
+
+        if not propiedad:
+            propiedad = "SIN PROPIEDAD"
+
+        if propiedad not in resumen_propiedades:
+            resumen_propiedades[propiedad] = {
+                "piezas": 0,
+                "stock": 0,
+                "valor": 0
+            }
+
+        resumen_propiedades[propiedad]["piezas"] += 1
+        resumen_propiedades[propiedad]["stock"] += stock
+        resumen_propiedades[propiedad]["valor"] += valor_producto
+
+    resumen_propiedades = dict(
+        sorted(
+            resumen_propiedades.items(),
+            key=lambda item: item[0]
+        )
+    )
+
+    for propiedad in resumen_propiedades:
+        resumen_propiedades[propiedad]["valor"] = round(
+            resumen_propiedades[propiedad]["valor"],
+            2
+        )
 
     return render_template(
         "dashboard.html",
@@ -636,9 +667,9 @@ def dashboard():
         vendidas=vendidas,
         prestadas=prestadas,
         credito=credito,
-        facturadas=facturadas
+        facturadas=facturadas,
+        resumen_propiedades=resumen_propiedades
     )
-
 
 # =========================
 # VENTAS / CRÉDITOS / PRÉSTAMOS
