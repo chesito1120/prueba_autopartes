@@ -29,6 +29,8 @@
             justify-content:space-between;
             align-items:center;
             margin-bottom:25px;
+            gap:15px;
+            flex-wrap:wrap;
         }
 
         .titulo h1{
@@ -42,6 +44,8 @@
             cursor:pointer;
             text-decoration:none;
             font-weight:bold;
+            display:inline-block;
+            font-size:14px;
         }
 
         .btn-azul{
@@ -62,6 +66,11 @@
         .btn-gris{
             background:#6b7280;
             color:white;
+        }
+
+        .btn:hover{
+            opacity:0.9;
+            transform:translateY(-1px);
         }
 
         .card{
@@ -91,9 +100,21 @@
             border-radius:10px;
         }
 
+        input:focus,
+        select:focus{
+            outline:3px solid rgba(37,99,235,0.25);
+            border-color:#2563eb;
+        }
+
+        .tabla-contenedor{
+            width:100%;
+            overflow-x:auto;
+        }
+
         .tabla{
             width:100%;
             border-collapse:collapse;
+            min-width:1050px;
         }
 
         .tabla th{
@@ -106,6 +127,7 @@
             padding:12px;
             border-bottom:1px solid #e5e7eb;
             text-align:center;
+            vertical-align:middle;
         }
 
         .activo{
@@ -118,12 +140,31 @@
             font-weight:bold;
         }
 
+        .rol-admin{
+            background:#dbeafe;
+            color:#1e40af;
+            padding:6px 12px;
+            border-radius:999px;
+            font-weight:bold;
+            display:inline-block;
+        }
+
+        .rol-vendedor{
+            background:#dcfce7;
+            color:#166534;
+            padding:6px 12px;
+            border-radius:999px;
+            font-weight:bold;
+            display:inline-block;
+        }
+
         .mensaje{
             background:#dcfce7;
             color:#166534;
             padding:15px;
             border-radius:10px;
             margin-bottom:20px;
+            font-weight:bold;
         }
 
         .error{
@@ -132,6 +173,7 @@
             padding:15px;
             border-radius:10px;
             margin-bottom:20px;
+            font-weight:bold;
         }
 
         .acciones{
@@ -139,6 +181,55 @@
             gap:8px;
             justify-content:center;
             flex-wrap:wrap;
+        }
+
+        .reset-box{
+            display:flex;
+            gap:8px;
+            justify-content:center;
+            align-items:center;
+            flex-wrap:wrap;
+            margin-top:8px;
+        }
+
+        .reset-box input{
+            width:190px;
+            padding:10px;
+        }
+
+        .nota{
+            background:#eff6ff;
+            color:#1e40af;
+            border-left:5px solid #2563eb;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:20px;
+            line-height:1.5;
+        }
+
+        @media(max-width:768px){
+            body{
+                padding:18px;
+            }
+
+            .titulo{
+                flex-direction:column;
+                align-items:flex-start;
+            }
+
+            .btn{
+                width:100%;
+                text-align:center;
+            }
+
+            .acciones,
+            .reset-box{
+                flex-direction:column;
+            }
+
+            .reset-box input{
+                width:100%;
+            }
         }
 
     </style>
@@ -156,6 +247,10 @@
             ← Volver al Inventario
         </a>
 
+    </div>
+
+    <div class="nota">
+        Solo el administrador puede crear usuarios, activar/desactivar cuentas y restablecer contraseñas.
     </div>
 
     {% if mensaje %}
@@ -195,7 +290,8 @@
                 <input
                     type="password"
                     name="password"
-                    placeholder="Contraseña"
+                    placeholder="Contraseña inicial"
+                    minlength="6"
                     required
                 >
 
@@ -230,94 +326,139 @@
 
         <h2>Usuarios Registrados</h2>
 
-        <table class="tabla">
+        <div class="tabla-contenedor">
 
-            <thead>
+            <table class="tabla">
 
-                <tr>
+                <thead>
 
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Estatus</th>
-                    <th>Acciones</th>
+                    <tr>
 
-                </tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Estatus</th>
+                        <th>Acciones</th>
+                        <th>Restablecer contraseña</th>
 
-            </thead>
+                    </tr>
 
-            <tbody>
+                </thead>
 
-            {% for usuario in usuarios %}
+                <tbody>
 
-                <tr>
+                {% for usuario in usuarios %}
 
-                    <td>{{ usuario.id }}</td>
+                    <tr>
 
-                    <td>{{ usuario.nombre }}</td>
+                        <td>{{ usuario.id }}</td>
 
-                    <td>{{ usuario.correo }}</td>
+                        <td>{{ usuario.nombre }}</td>
 
-                    <td>{{ usuario.rol }}</td>
+                        <td>{{ usuario.correo }}</td>
 
-                    <td>
+                        <td>
+                            {% if usuario.rol == "admin" %}
+                                <span class="rol-admin">
+                                    Administrador
+                                </span>
+                            {% else %}
+                                <span class="rol-vendedor">
+                                    Vendedor
+                                </span>
+                            {% endif %}
+                        </td>
 
-                        {% if usuario.activo %}
-                            <span class="activo">
-                                Activo
-                            </span>
-                        {% else %}
-                            <span class="inactivo">
-                                Inactivo
-                            </span>
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-
-                        <div class="acciones">
+                        <td>
 
                             {% if usuario.activo %}
-
-                                <a
-                                    href="/usuarios/desactivar/{{ usuario.id }}"
-                                    class="btn btn-gris"
-                                >
-                                    Desactivar
-                                </a>
-
+                                <span class="activo">
+                                    Activo
+                                </span>
                             {% else %}
-
-                                <a
-                                    href="/usuarios/activar/{{ usuario.id }}"
-                                    class="btn btn-verde"
-                                >
-                                    Activar
-                                </a>
-
+                                <span class="inactivo">
+                                    Inactivo
+                                </span>
                             {% endif %}
 
-                            <a
-                                href="/usuarios/eliminar/{{ usuario.id }}"
-                                class="btn btn-rojo"
-                                onclick="return confirm('¿Eliminar usuario?')"
+                        </td>
+
+                        <td>
+
+                            <div class="acciones">
+
+                                {% if usuario.activo %}
+
+                                    <a
+                                        href="/usuarios/desactivar/{{ usuario.id }}"
+                                        class="btn btn-gris"
+                                        onclick="return confirm('¿Desactivar este usuario?')"
+                                    >
+                                        Desactivar
+                                    </a>
+
+                                {% else %}
+
+                                    <a
+                                        href="/usuarios/activar/{{ usuario.id }}"
+                                        class="btn btn-verde"
+                                        onclick="return confirm('¿Activar este usuario?')"
+                                    >
+                                        Activar
+                                    </a>
+
+                                {% endif %}
+
+                                <a
+                                    href="/usuarios/eliminar/{{ usuario.id }}"
+                                    class="btn btn-rojo"
+                                    onclick="return confirm('¿Eliminar usuario? Esta acción no se puede deshacer.')"
+                                >
+                                    Eliminar
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                        <td>
+
+                            <form
+                                method="POST"
+                                action="/usuarios/reset/{{ usuario.id }}"
+                                class="reset-box"
                             >
-                                Eliminar
-                            </a>
 
-                        </div>
+                                <input
+                                    type="password"
+                                    name="nueva_password"
+                                    placeholder="Nueva contraseña"
+                                    minlength="6"
+                                    required
+                                >
 
-                    </td>
+                                <button
+                                    type="submit"
+                                    class="btn btn-azul"
+                                    onclick="return confirm('¿Restablecer la contraseña de este usuario?')"
+                                >
+                                    Cambiar
+                                </button>
 
-                </tr>
+                            </form>
 
-            {% endfor %}
+                        </td>
 
-            </tbody>
+                    </tr>
 
-        </table>
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
 

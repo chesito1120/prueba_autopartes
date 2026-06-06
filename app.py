@@ -345,6 +345,28 @@ def eliminar_usuario(id):
     return redirect("/usuarios")
 
 
+
+@app.route("/usuarios/reset/<int:id>", methods=["POST"])
+def reset_password_usuario(id):
+    if not session.get("rol"):
+        return redirect("/login")
+
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    usuario = Usuario.query.get_or_404(id)
+
+    nueva_password = request.form.get("nueva_password") or ""
+
+    if len(nueva_password) < 6:
+        return redirect("/usuarios")
+
+    usuario.password_hash = generate_password_hash(nueva_password)
+    db.session.commit()
+
+    return redirect("/usuarios")
+
+
 # =========================
 # ADMIN / AGREGAR PRODUCTO
 # =========================
