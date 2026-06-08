@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import zipfile
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -144,6 +145,40 @@ def extraer_zip_imagenes(archivo_zip):
 
 
 # =========================
+# FUNCIONES DE CRÉDITO
+# =========================
+
+def obtener_cantidad_movimiento(producto):
+    comentarios = producto.comentarios_venta or ""
+
+    if "Cantidad:" in comentarios:
+        try:
+            parte = comentarios.split("Cantidad:", 1)[1]
+            numero = parte.split(".", 1)[0].strip()
+            return int(numero)
+        except Exception:
+            return 1
+
+    return 1
+
+
+def calcular_total_credito(producto):
+    cantidad = obtener_cantidad_movimiento(producto)
+    precio = producto.costo_venta or 0
+    return round(precio * cantidad, 2)
+
+
+def calcular_abonado(producto_id):
+    total_abonado = db.session.query(
+        db.func.coalesce(db.func.sum(AbonoCredito.monto), 0)
+    ).filter(
+        AbonoCredito.producto_id == producto_id
+    ).scalar()
+
+    return round(float(total_abonado or 0), 2)
+
+
+# =========================
 # MODELOS
 # =========================
 
@@ -155,6 +190,16 @@ class Usuario(db.Model):
     password_hash = db.Column(db.String(300), nullable=False)
     rol = db.Column(db.String(50), default="vendedor")
     activo = db.Column(db.Boolean, default=True)
+
+
+class AbonoCredito(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey("producto.id"), nullable=False)
+    monto = db.Column(db.Float, default=0)
+    fecha = db.Column(db.String(100))
+    comentario = db.Column(db.String(300))
+
+    producto = db.relationship("Producto", backref="abonos_credito")
 
 
 class Producto(db.Model):
@@ -610,9 +655,40 @@ def dashboard():
     disponibles = Producto.query.filter(Producto.stock > 0).count()
     agotados = Producto.query.filter(Producto.stock == 0).count()
 
-    vendidas = Producto.query.filter(Producto.estado == "vendido").count()
-    prestadas = Producto.query.filter(Producto.estado == "prestado").count()
-    credito = Producto.query.filter(Producto.estado == "credito").count()
+    productos_vendidos = Producto.query.filter(
+        Producto.estado.in_(["vendido", "pagado"])
+    ).all()
+
+    productos_credito = Producto.query.filter(
+        Producto.estado == "credito"
+    ).all()
+
+    productos_prestados = Producto.query.filter(
+        Producto.estado == "prestado"
+    ).all()
+
+    vendidas = len(productos_vendidos)
+    prestadas = len(productos_prestados)
+
+    monto_vendido = 0
+    for producto in productos_vendidos:
+        monto_vendido += calcular_total_credito(producto)
+
+    credito = 0
+    monto_credito = 0
+
+    for producto in productos_credito:
+        total_credito = calcular_total_credito(producto)
+        abonado = calcular_abonado(producto.id)
+        saldo = round(max(total_credito - abonado, 0), 2)
+
+        if saldo > 0:
+            credito += 1
+            monto_credito += saldo
+        else:
+            producto.estado = "pagado"
+
+    db.session.commit()
 
     facturadas = Producto.query.filter(
         Producto.factura.isnot(None),
@@ -665,11 +741,14 @@ def dashboard():
         agotados=agotados,
         valor_total=round(valor_total, 2),
         vendidas=vendidas,
+        monto_vendido=round(monto_vendido, 2),
         prestadas=prestadas,
         credito=credito,
+        monto_credito=round(monto_credito, 2),
         facturadas=facturadas,
         resumen_propiedades=resumen_propiedades
     )
+
 
 # =========================
 # VENTAS / CRÉDITOS / PRÉSTAMOS
@@ -736,6 +815,125 @@ def ventas():
         mensaje=mensaje,
         error=error
     )
+
+
+# =========================
+# CRÉDITOS / ABONOS
+# =========================
+
+@app.route("/creditos")
+def creditos():
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    productos_credito = Producto.query.filter(
+        Producto.estado.in_(["credito", "pagado"])
+    ).all()
+
+    creditos_lista = []
+
+    for producto in productos_credito:
+        total = calcular_total_credito(producto)
+        abonado = calcular_abonado(producto.id)
+        saldo = round(max(total - abonado, 0), 2)
+        pagado = producto.estado == "pagado" or saldo <= 0
+
+        if pagado and producto.estado != "pagado":
+            producto.estado = "pagado"
+            db.session.commit()
+
+        creditos_lista.append({
+            "producto": producto,
+            "total": round(total, 2),
+            "abonado": round(abonado, 2),
+            "saldo": round(saldo, 2),
+            "pagado": pagado
+        })
+
+    return render_template(
+        "creditos.html",
+        creditos=creditos_lista
+    )
+
+
+@app.route("/abonar/<int:id>", methods=["POST"])
+def abonar_credito(id):
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    producto = Producto.query.get_or_404(id)
+
+    if producto.estado not in ["credito", "pagado"]:
+        return redirect("/creditos")
+
+    try:
+        monto = float(request.form.get("monto") or 0)
+    except ValueError:
+        monto = 0
+
+    if monto <= 0:
+        return redirect("/creditos")
+
+    total = calcular_total_credito(producto)
+    abonado_actual = calcular_abonado(producto.id)
+    saldo_actual = max(total - abonado_actual, 0)
+
+    if saldo_actual <= 0:
+        producto.estado = "pagado"
+        db.session.commit()
+        return redirect("/creditos")
+
+    if monto > saldo_actual:
+        monto = saldo_actual
+
+    abono = AbonoCredito(
+        producto_id=producto.id,
+        monto=monto,
+        fecha=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        comentario=f"Abono registrado por {session.get('usuario', 'usuario')}"
+    )
+
+    db.session.add(abono)
+
+    nuevo_abonado = abonado_actual + monto
+
+    if nuevo_abonado >= total:
+        producto.estado = "pagado"
+        producto.metodo_pago = "Crédito liquidado"
+
+    db.session.commit()
+
+    return redirect("/creditos")
+
+
+@app.route("/marcar_pagado/<int:id>")
+def marcar_pagado(id):
+    if not session.get("rol") in ["admin", "vendedor"]:
+        return redirect("/login")
+
+    producto = Producto.query.get_or_404(id)
+
+    if producto.estado not in ["credito", "pagado"]:
+        return redirect("/creditos")
+
+    total = calcular_total_credito(producto)
+    abonado_actual = calcular_abonado(producto.id)
+    saldo = round(max(total - abonado_actual, 0), 2)
+
+    if saldo > 0:
+        abono = AbonoCredito(
+            producto_id=producto.id,
+            monto=saldo,
+            fecha=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            comentario=f"Liquidado por {session.get('usuario', 'usuario')}"
+        )
+        db.session.add(abono)
+
+    producto.estado = "pagado"
+    producto.metodo_pago = "Crédito liquidado"
+    db.session.commit()
+
+    return redirect("/creditos")
 
 
 # =========================

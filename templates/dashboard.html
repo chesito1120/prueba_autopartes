@@ -29,6 +29,10 @@ Dashboard
         margin-bottom: 35px;
     }
 
+    .dashboard-card-link {
+        text-decoration: none;
+    }
+
     .dashboard-card-box {
         background: #ffffff;
         color: #111827;
@@ -37,6 +41,12 @@ Dashboard
         min-height: 130px;
         box-shadow: 0 8px 18px rgba(0,0,0,0.25);
         border-top: 5px solid #2563eb;
+        transition: 0.25s;
+    }
+
+    .dashboard-card-box:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
 
     .dashboard-card-box span {
@@ -130,58 +140,74 @@ Dashboard
 
 <div class="dashboard-header">
     <h1>Dashboard</h1>
-    <p>Resumen general del inventario, ventas, préstamos, adeudos y propiedad de piezas.</p>
+    <p>Resumen general del inventario, ventas, préstamos, créditos y propiedad de piezas.</p>
 </div>
 
 <div class="dashboard-cards">
 
-    <div class="dashboard-card-box">
-        <span>Total inventario</span>
-        <h2>{{ total }}</h2>
-        <p>Piezas registradas</p>
-    </div>
+    <a href="/inventario" class="dashboard-card-link">
+        <div class="dashboard-card-box">
+            <span>Total inventario</span>
+            <h2>{{ total }}</h2>
+            <p>Piezas registradas</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-green">
-        <span>Disponibles</span>
-        <h2>{{ disponibles }}</h2>
-        <p>Piezas en existencia</p>
-    </div>
+    <a href="/inventario" class="dashboard-card-link">
+        <div class="dashboard-card-box card-green">
+            <span>Disponibles</span>
+            <h2>{{ disponibles }}</h2>
+            <p>Piezas en existencia</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-red">
-        <span>Agotadas</span>
-        <h2>{{ agotados }}</h2>
-        <p>Sin stock</p>
-    </div>
+    <a href="/inventario" class="dashboard-card-link">
+        <div class="dashboard-card-box card-red">
+            <span>Agotadas</span>
+            <h2>{{ agotados }}</h2>
+            <p>Sin stock</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-yellow">
-        <span>Valor inventario</span>
-        <h2>${{ valor_total }}</h2>
-        <p>Valor aproximado</p>
-    </div>
+    <a href="/inventario" class="dashboard-card-link">
+        <div class="dashboard-card-box card-yellow">
+            <span>Valor inventario</span>
+            <h2>${{ valor_total }}</h2>
+            <p>Valor aproximado en stock</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-purple">
-        <span>Vendidas</span>
-        <h2>{{ vendidas }}</h2>
-        <p>Piezas vendidas</p>
-    </div>
+    <a href="/ventas" class="dashboard-card-link">
+        <div class="dashboard-card-box card-purple">
+            <span>Monto vendido</span>
+            <h2>${{ monto_vendido }}</h2>
+            <p>{{ vendidas }} pieza(s) vendidas</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-cyan">
-        <span>Prestadas</span>
-        <h2>{{ prestadas }}</h2>
-        <p>Piezas prestadas</p>
-    </div>
+    <a href="/prestamos" class="dashboard-card-link">
+        <div class="dashboard-card-box card-cyan">
+            <span>Prestadas</span>
+            <h2>{{ prestadas }}</h2>
+            <p>Piezas prestadas</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-orange">
-        <span>A crédito</span>
-        <h2>{{ credito }}</h2>
-        <p>Pendientes de pago</p>
-    </div>
+    <a href="/creditos" class="dashboard-card-link">
+        <div class="dashboard-card-box card-orange">
+            <span>A crédito</span>
+            <h2>${{ monto_credito }}</h2>
+            <p>{{ credito }} crédito(s) pendiente(s)</p>
+        </div>
+    </a>
 
-    <div class="dashboard-card-box card-gray">
-        <span>Facturadas</span>
-        <h2>{{ facturadas }}</h2>
-        <p>Con factura registrada</p>
-    </div>
+    <a href="/ventas" class="dashboard-card-link">
+        <div class="dashboard-card-box card-gray">
+            <span>Facturadas</span>
+            <h2>{{ facturadas }}</h2>
+            <p>Con factura registrada</p>
+        </div>
+    </a>
 
 </div>
 
@@ -191,7 +217,7 @@ Dashboard
     <table>
         <tr>
             <th>Concepto</th>
-            <th>Cantidad</th>
+            <th>Cantidad / Monto</th>
             <th>Descripción</th>
         </tr>
 
@@ -208,6 +234,12 @@ Dashboard
         </tr>
 
         <tr>
+            <td>Monto vendido</td>
+            <td>${{ monto_vendido }}</td>
+            <td>Total aproximado vendido</td>
+        </tr>
+
+        <tr>
             <td>Prestadas</td>
             <td>{{ prestadas }}</td>
             <td>Piezas entregadas como préstamo</td>
@@ -215,8 +247,8 @@ Dashboard
 
         <tr>
             <td>A crédito</td>
-            <td>{{ credito }}</td>
-            <td>Piezas vendidas pendientes de pago</td>
+            <td>${{ monto_credito }}</td>
+            <td>Monto pendiente de pago</td>
         </tr>
     </table>
 </div>
@@ -238,21 +270,10 @@ Dashboard
             {% for propiedad, datos in resumen_propiedades.items() %}
 
                 <tr class="{% if propiedad in ['CONJUNTO', 'SOCIOS', 'TODOS'] %}propiedad-conjunto{% endif %}">
-                    <td class="propiedad-nombre">
-                        {{ propiedad }}
-                    </td>
-
-                    <td>
-                        {{ datos.piezas }}
-                    </td>
-
-                    <td>
-                        {{ datos.stock }}
-                    </td>
-
-                    <td>
-                        ${{ datos.valor }}
-                    </td>
+                    <td class="propiedad-nombre">{{ propiedad }}</td>
+                    <td>{{ datos.piezas }}</td>
+                    <td>{{ datos.stock }}</td>
+                    <td>${{ datos.valor }}</td>
 
                     <td>
                         {% if propiedad in ['CONJUNTO', 'SOCIOS', 'TODOS'] %}
@@ -270,9 +291,7 @@ Dashboard
         {% else %}
 
             <tr>
-                <td colspan="5">
-                    No hay información de propiedad registrada.
-                </td>
+                <td colspan="5">No hay información de propiedad registrada.</td>
             </tr>
 
         {% endif %}

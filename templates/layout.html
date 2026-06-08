@@ -89,22 +89,23 @@
 
     <nav class="nav-links">
 
-        {% if session.get('rol') == 'admin' %}
-            <a href="/dashboard">Dashboard</a>
-            <a href="/usuarios">Usuarios</a>
-        {% endif %}
+    {% if session.get('rol') == 'admin' %}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/usuarios">Usuarios</a>
+    {% endif %}
 
-        <a href="/inventario">Inventario</a>
-        <a href="/ventas">Ventas</a>
-        <a href="/prestamos">Préstamos</a>
-        <a href="/excel">Carga Excel</a>
-        <a href="/">Catálogo</a>
+    <a href="/inventario">Inventario</a>
+    <a href="/ventas">Ventas</a>
+    <a href="/creditos">Créditos</a>
+    <a href="/prestamos">Préstamos</a>
+    <a href="/excel">Carga Excel</a>
+    <a href="/">Catálogo</a>
 
-        <a href="/logout" class="logout">
-            Cerrar sesión
-        </a>
+    <a href="/logout" class="logout">
+        Cerrar sesión
+    </a>
 
-    </nav>
+</nav>
 </header>
 
 <main class="main-content">

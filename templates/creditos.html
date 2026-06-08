@@ -1,0 +1,223 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Créditos
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .creditos-header {
+        margin-bottom: 25px;
+    }
+
+    .creditos-header h1 {
+        color: white;
+        font-size: 34px;
+        margin-bottom: 8px;
+    }
+
+    .creditos-header p {
+        color: #d1d5db;
+    }
+
+    .creditos-card {
+        background: white;
+        color: #111827;
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        overflow-x: auto;
+    }
+
+    .creditos-card table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1100px;
+    }
+
+    .creditos-card th {
+        background: #e5e7eb;
+        color: #111827;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .creditos-card td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .badge-credito {
+        background: #ffedd5;
+        color: #9a3412;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 13px;
+    }
+
+    .badge-pagado {
+        background: #dcfce7;
+        color: #166534;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 13px;
+    }
+
+    .saldo {
+        font-weight: bold;
+        color: #dc2626;
+    }
+
+    .abonado {
+        font-weight: bold;
+        color: #16a34a;
+    }
+
+    .form-abono {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .form-abono input {
+        width: 130px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+    }
+
+    .btn-mini {
+        border: none;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+    }
+
+    .btn-abonar {
+        background: #2563eb;
+    }
+
+    .btn-pagado {
+        background: #16a34a;
+    }
+
+    .sin-creditos {
+        background: white;
+        color: #111827;
+        border-radius: 14px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+</style>
+
+<div class="creditos-header">
+    <h1>Créditos</h1>
+    <p>Control de abonos, saldos pendientes y créditos liquidados.</p>
+</div>
+
+{% if creditos %}
+
+<div class="creditos-card">
+
+    <table>
+        <tr>
+            <th>Autoparte</th>
+            <th>Cliente</th>
+            <th>Total crédito</th>
+            <th>Abonado</th>
+            <th>Saldo pendiente</th>
+            <th>Estado</th>
+            <th>Abonar</th>
+            <th>Liquidar</th>
+        </tr>
+
+        {% for credito in creditos %}
+
+        <tr>
+            <td>{{ credito.producto.autoparte or '-' }}</td>
+            <td>{{ credito.producto.vendido_a or '-' }}</td>
+
+            <td>${{ credito.total }}</td>
+
+            <td class="abonado">
+                ${{ credito.abonado }}
+            </td>
+
+            <td class="saldo">
+                ${{ credito.saldo }}
+            </td>
+
+            <td>
+                {% if credito.pagado %}
+                    <span class="badge-pagado">Pagado</span>
+                {% else %}
+                    <span class="badge-credito">A crédito</span>
+                {% endif %}
+            </td>
+
+            <td>
+                {% if not credito.pagado %}
+                    <form
+                        method="POST"
+                        action="/abonar/{{ credito.producto.id }}"
+                        class="form-abono"
+                    >
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="1"
+                            name="monto"
+                            placeholder="Monto"
+                            required
+                        >
+
+                        <button
+                            type="submit"
+                            class="btn-mini btn-abonar"
+                        >
+                            Abonar
+                        </button>
+                    </form>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if not credito.pagado %}
+                    <a href="/marcar_pagado/{{ credito.producto.id }}">
+                        <button
+                            class="btn-mini btn-pagado"
+                            onclick="return confirm('¿Marcar este crédito como pagado?')"
+                        >
+                            Pagado
+                        </button>
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+
+        {% endfor %}
+    </table>
+
+</div>
+
+{% else %}
+
+<div class="sin-creditos">
+    <h2>No hay créditos pendientes</h2>
+    <p>Cuando registres una venta a crédito aparecerá aquí.</p>
+</div>
+
+{% endif %}
+
+{% endblock %}
