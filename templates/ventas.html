@@ -92,7 +92,7 @@ Ventas y préstamos
     .ventas-table table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 950px;
+        min-width: 1150px;
     }
 
     .ventas-table th {
@@ -128,6 +128,11 @@ Ventas y préstamos
         color: #9a3412;
     }
 
+    .badge-pagado {
+        background: #dcfce7;
+        color: #166534;
+    }
+
     .alerta-ok {
         background: #dcfce7;
         color: #166534;
@@ -146,6 +151,11 @@ Ventas y préstamos
         font-weight: bold;
     }
 
+    .monto {
+        font-weight: bold;
+        color: #111827;
+    }
+
     @media (max-width: 768px) {
         .form-grid-ventas {
             grid-template-columns: 1fr;
@@ -160,7 +170,7 @@ Ventas y préstamos
 
 <div class="ventas-header">
     <h1>Ventas, créditos y préstamos</h1>
-    <p>Registra salidas de inventario, cantidades vendidas, créditos o préstamos.</p>
+    <p>Registra salidas de inventario, ventas de contado, créditos independientes o préstamos.</p>
 </div>
 
 <div class="ventas-card">
@@ -194,7 +204,7 @@ Ventas y préstamos
                         value="{{ producto.id }}"
                         data-texto="{{ producto.autoparte }} {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }} {{ producto.motor }} {{ producto.transmision }} {{ producto.lado }} {{ producto.origen }}"
                     >
-                        {{ producto.autoparte }} - {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }} | Stock: {{ producto.stock }}
+                        {{ producto.autoparte }} - {{ producto.marca }} {{ producto.modelo }} {{ producto.anio }} | Stock: {{ producto.stock }} | ${{ producto.costo_venta or 0 }}
                     </option>
                 {% endfor %}
             </select>
@@ -253,9 +263,12 @@ Ventas y préstamos
 
     <table>
         <tr>
+            <th>ID Movimiento</th>
             <th>Autoparte</th>
             <th>Cliente / Bodega</th>
             <th>Estado</th>
+            <th>Cantidad</th>
+            <th>Total</th>
             <th>Método pago</th>
             <th>Factura</th>
             <th>Fecha salida</th>
@@ -263,28 +276,45 @@ Ventas y préstamos
             <th>Comentarios</th>
         </tr>
 
-        {% for producto in movimientos %}
+        {% for movimiento in movimientos %}
         <tr>
-            <td>{{ producto.autoparte }}</td>
-            <td>{{ producto.vendido_a }}</td>
+            <td>{{ movimiento.id }}</td>
 
             <td>
-                {% if producto.estado == "vendido" %}
-                    <span class="badge badge-vendido">Vendido</span>
-                {% elif producto.estado == "prestado" %}
-                    <span class="badge badge-prestado">Prestado</span>
-                {% elif producto.estado == "credito" %}
-                    <span class="badge badge-credito">Crédito</span>
+                {% if movimiento.producto %}
+                    {{ movimiento.producto.autoparte }}
                 {% else %}
-                    {{ producto.estado }}
+                    {{ movimiento.autoparte or '-' }}
                 {% endif %}
             </td>
 
-            <td>{{ producto.metodo_pago }}</td>
-            <td>{{ producto.factura }}</td>
-            <td>{{ producto.fecha_salida }}</td>
-            <td>{{ producto.fecha_prestamo }}</td>
-            <td>{{ producto.comentarios_venta }}</td>
+            <td>{{ movimiento.cliente or '-' }}</td>
+
+            <td>
+                {% if movimiento.estado == "vendido" %}
+                    <span class="badge badge-vendido">Vendido</span>
+                {% elif movimiento.estado == "prestado" %}
+                    <span class="badge badge-prestado">Prestado</span>
+                {% elif movimiento.estado == "credito" %}
+                    <span class="badge badge-credito">Crédito</span>
+                {% elif movimiento.estado == "pagado" %}
+                    <span class="badge badge-pagado">Pagado</span>
+                {% else %}
+                    {{ movimiento.estado }}
+                {% endif %}
+            </td>
+
+            <td>{{ movimiento.cantidad }}</td>
+
+            <td class="monto">
+                ${{ movimiento.total }}
+            </td>
+
+            <td>{{ movimiento.metodo_pago or '-' }}</td>
+            <td>{{ movimiento.factura or '-' }}</td>
+            <td>{{ movimiento.fecha_salida or '-' }}</td>
+            <td>{{ movimiento.fecha_prestamo or '-' }}</td>
+            <td>{{ movimiento.comentarios or '-' }}</td>
         </tr>
         {% endfor %}
     </table>

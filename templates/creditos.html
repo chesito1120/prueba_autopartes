@@ -33,7 +33,7 @@ Créditos
     .creditos-card table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1100px;
+        min-width: 1200px;
     }
 
     .creditos-card th {
@@ -77,6 +77,11 @@ Créditos
         color: #16a34a;
     }
 
+    .total {
+        font-weight: bold;
+        color: #111827;
+    }
+
     .form-abono {
         display: flex;
         gap: 8px;
@@ -115,11 +120,17 @@ Créditos
         text-align: center;
         box-shadow: 0 8px 18px rgba(0,0,0,0.25);
     }
+
+    .detalle {
+        color: #6b7280;
+        font-size: 13px;
+        margin-top: 4px;
+    }
 </style>
 
 <div class="creditos-header">
     <h1>Créditos</h1>
-    <p>Control de abonos, saldos pendientes y créditos liquidados.</p>
+    <p>Control de abonos, saldos pendientes y créditos independientes por compra.</p>
 </div>
 
 {% if creditos %}
@@ -128,12 +139,15 @@ Créditos
 
     <table>
         <tr>
+            <th>ID Crédito</th>
             <th>Autoparte</th>
             <th>Cliente</th>
+            <th>Cantidad</th>
             <th>Total crédito</th>
             <th>Abonado</th>
             <th>Saldo pendiente</th>
             <th>Estado</th>
+            <th>Fecha</th>
             <th>Abonar</th>
             <th>Liquidar</th>
         </tr>
@@ -141,10 +155,28 @@ Créditos
         {% for credito in creditos %}
 
         <tr>
-            <td>{{ credito.producto.autoparte or '-' }}</td>
-            <td>{{ credito.producto.vendido_a or '-' }}</td>
+            <td>#{{ credito.id }}</td>
 
-            <td>${{ credito.total }}</td>
+            <td>
+                {% if credito.producto %}
+                    {{ credito.producto.autoparte or '-' }}
+                    <div class="detalle">
+                        {{ credito.producto.marca or '' }}
+                        {{ credito.producto.modelo or '' }}
+                        {{ credito.producto.anio or '' }}
+                    </div>
+                {% else %}
+                    {{ credito.autoparte or '-' }}
+                {% endif %}
+            </td>
+
+            <td>{{ credito.cliente or '-' }}</td>
+
+            <td>{{ credito.cantidad or 1 }}</td>
+
+            <td class="total">
+                ${{ credito.total }}
+            </td>
 
             <td class="abonado">
                 ${{ credito.abonado }}
@@ -155,18 +187,20 @@ Créditos
             </td>
 
             <td>
-                {% if credito.pagado %}
+                {% if credito.estado == "pagado" %}
                     <span class="badge-pagado">Pagado</span>
                 {% else %}
                     <span class="badge-credito">A crédito</span>
                 {% endif %}
             </td>
 
+            <td>{{ credito.fecha_salida or '-' }}</td>
+
             <td>
-                {% if not credito.pagado %}
+                {% if credito.estado != "pagado" %}
                     <form
                         method="POST"
-                        action="/abonar/{{ credito.producto.id }}"
+                        action="/abonar/{{ credito.id }}"
                         class="form-abono"
                     >
                         <input
@@ -191,8 +225,8 @@ Créditos
             </td>
 
             <td>
-                {% if not credito.pagado %}
-                    <a href="/marcar_pagado/{{ credito.producto.id }}">
+                {% if credito.estado != "pagado" %}
+                    <a href="/marcar_pagado/{{ credito.id }}">
                         <button
                             class="btn-mini btn-pagado"
                             onclick="return confirm('¿Marcar este crédito como pagado?')"
@@ -215,7 +249,7 @@ Créditos
 
 <div class="sin-creditos">
     <h2>No hay créditos pendientes</h2>
-    <p>Cuando registres una venta a crédito aparecerá aquí.</p>
+    <p>Cuando registres una venta a crédito aparecerá aquí como una compra independiente.</p>
 </div>
 
 {% endif %}

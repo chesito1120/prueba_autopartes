@@ -145,37 +145,29 @@ def extraer_zip_imagenes(archivo_zip):
 
 
 # =========================
-# FUNCIONES DE CRÉDITO
+# FUNCIONES DE CRÉDITO Y MOVIMIENTOS
 # =========================
 
-def obtener_cantidad_movimiento(producto):
-    comentarios = producto.comentarios_venta or ""
-
-    if "Cantidad:" in comentarios:
-        try:
-            parte = comentarios.split("Cantidad:", 1)[1]
-            numero = parte.split(".", 1)[0].strip()
-            return int(numero)
-        except Exception:
-            return 1
-
-    return 1
-
-
-def calcular_total_credito(producto):
-    cantidad = obtener_cantidad_movimiento(producto)
-    precio = producto.costo_venta or 0
-    return round(precio * cantidad, 2)
-
-
-def calcular_abonado(producto_id):
+def calcular_abonado_credito(credito_id):
     total_abonado = db.session.query(
-        db.func.coalesce(db.func.sum(AbonoCredito.monto), 0)
+        db.func.coalesce(db.func.sum(AbonoCreditoVenta.monto), 0)
     ).filter(
-        AbonoCredito.producto_id == producto_id
+        AbonoCreditoVenta.credito_id == credito_id
     ).scalar()
 
     return round(float(total_abonado or 0), 2)
+
+
+def calcular_saldo_credito(credito):
+    abonado = calcular_abonado_credito(credito.id)
+    total = credito.total or 0
+    saldo = round(max(total - abonado, 0), 2)
+    return abonado, saldo
+
+
+def calcular_total_movimiento(producto, cantidad):
+    precio = producto.costo_venta or 0
+    return round(precio * cantidad, 2)
 
 
 # =========================
@@ -192,14 +184,55 @@ class Usuario(db.Model):
     activo = db.Column(db.Boolean, default=True)
 
 
-class AbonoCredito(db.Model):
+class Movimiento(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+
     producto_id = db.Column(db.Integer, db.ForeignKey("producto.id"), nullable=False)
+    producto = db.relationship("Producto", backref="movimientos")
+
+    tipo = db.Column(db.String(50))
+    estado = db.Column(db.String(50))
+
+    cliente = db.Column(db.String(150))
+    cantidad = db.Column(db.Integer, default=1)
+    precio_unitario = db.Column(db.Float, default=0)
+    total = db.Column(db.Float, default=0)
+
+    metodo_pago = db.Column(db.String(100))
+    factura = db.Column(db.String(100))
+    fecha_salida = db.Column(db.String(100))
+    fecha_prestamo = db.Column(db.String(100))
+    comentarios = db.Column(db.Text)
+    fecha_registro = db.Column(db.String(100))
+
+
+class CreditoVenta(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    movimiento_id = db.Column(db.Integer, db.ForeignKey("movimiento.id"), nullable=False)
+    movimiento = db.relationship("Movimiento", backref="credito")
+
+    producto_id = db.Column(db.Integer, db.ForeignKey("producto.id"), nullable=False)
+    producto = db.relationship("Producto", backref="creditos_venta")
+
+    cliente = db.Column(db.String(150))
+    cantidad = db.Column(db.Integer, default=1)
+    precio_unitario = db.Column(db.Float, default=0)
+    total = db.Column(db.Float, default=0)
+    estado = db.Column(db.String(50), default="credito")
+    fecha_salida = db.Column(db.String(100))
+    comentarios = db.Column(db.Text)
+
+
+class AbonoCreditoVenta(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    credito_id = db.Column(db.Integer, db.ForeignKey("credito_venta.id"), nullable=False)
+    credito = db.relationship("CreditoVenta", backref="abonos")
+
     monto = db.Column(db.Float, default=0)
     fecha = db.Column(db.String(100))
     comentario = db.Column(db.String(300))
-
-    producto = db.relationship("Producto", backref="abonos_credito")
 
 
 class Producto(db.Model):
@@ -650,27 +683,84 @@ def dashboard():
         return redirect("/inventario")
 
     productos = Producto.query.all()
+    movimientos = Movimiento.query.all()
+    creditos_pendientes = CreditoVenta.query.filter(
+        CreditoVenta.estado == "credito"
+    ).all()
 
     total = Producto.query.count()
     disponibles = Producto.query.filter(Producto.stock > 0).count()
     agotados = Producto.query.filter(Producto.stock == 0).count()
 
-    vendidas = Producto.query.filter(Producto.estado == "vendido").count()
-    prestadas = Producto.query.filter(Producto.estado == "prestado").count()
-    credito = Producto.query.filter(Producto.estado == "credito").count()
+    vendidas = Movimiento.query.filter(Movimiento.estado == "vendido").count()
+    prestadas = Movimiento.query.filter(Movimiento.estado == "prestado").count()
+    credito = len(creditos_pendientes)
 
-    facturadas = Producto.query.filter(
-        Producto.factura.isnot(None),
-        Producto.factura != "",
-        Producto.factura != "no"
+    facturadas = Movimiento.query.filter(
+        Movimiento.factura.isnot(None),
+        Movimiento.factura != "",
+        Movimiento.factura != "no"
     ).count()
 
     valor_total = 0
+    resumen_propiedades = {}
 
     for producto in productos:
         precio = producto.costo_venta or 0
         stock = producto.stock or 0
-        valor_total += precio * stock
+        valor_producto = precio * stock
+        valor_total += valor_producto
+
+        propiedad = (producto.propiedad or "SIN PROPIEDAD").strip().upper()
+
+        if not propiedad:
+            propiedad = "SIN PROPIEDAD"
+
+        if propiedad not in resumen_propiedades:
+            resumen_propiedades[propiedad] = {
+                "piezas": 0,
+                "stock": 0,
+                "valor": 0
+            }
+
+        resumen_propiedades[propiedad]["piezas"] += 1
+        resumen_propiedades[propiedad]["stock"] += stock
+        resumen_propiedades[propiedad]["valor"] += valor_producto
+
+    resumen_propiedades = dict(
+        sorted(
+            resumen_propiedades.items(),
+            key=lambda item: item[0]
+        )
+    )
+
+    for propiedad in resumen_propiedades:
+        resumen_propiedades[propiedad]["valor"] = round(
+            resumen_propiedades[propiedad]["valor"],
+            2
+        )
+
+    # Monto vendido real:
+    # ventas de contado + abonos recibidos de créditos.
+    monto_ventas_contado = db.session.query(
+        db.func.coalesce(db.func.sum(Movimiento.total), 0)
+    ).filter(
+        Movimiento.estado == "vendido"
+    ).scalar()
+
+    monto_abonos_credito = db.session.query(
+        db.func.coalesce(db.func.sum(AbonoCreditoVenta.monto), 0)
+    ).scalar()
+
+    monto_vendido = float(monto_ventas_contado or 0) + float(monto_abonos_credito or 0)
+
+    # Monto pendiente a crédito:
+    # solo suma saldos pendientes de créditos abiertos.
+    monto_credito = 0
+
+    for credito_item in creditos_pendientes:
+        abonado, saldo = calcular_saldo_credito(credito_item)
+        monto_credito += saldo
 
     return render_template(
         "dashboard.html",
@@ -681,7 +771,10 @@ def dashboard():
         vendidas=vendidas,
         prestadas=prestadas,
         credito=credito,
-        facturadas=facturadas
+        facturadas=facturadas,
+        monto_vendido=round(float(monto_vendido or 0), 2),
+        monto_credito=round(float(monto_credito or 0), 2),
+        resumen_propiedades=resumen_propiedades
     )
 
 
@@ -711,16 +804,52 @@ def ventas():
             error = f"No hay suficiente stock. Stock actual: {producto.stock}"
 
         else:
+            precio_unitario = producto.costo_venta or 0
+            total_movimiento = calcular_total_movimiento(producto, cantidad)
+            fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             producto.stock -= cantidad
 
-            if tipo_movimiento == "vendido":
-                producto.estado = "vendido"
+            movimiento = Movimiento(
+                producto_id=producto.id,
+                tipo=tipo_movimiento,
+                estado=tipo_movimiento,
+                cliente=request.form.get("vendido_a"),
+                cantidad=cantidad,
+                precio_unitario=precio_unitario,
+                total=total_movimiento,
+                metodo_pago=request.form.get("metodo_pago"),
+                factura=request.form.get("factura"),
+                fecha_salida=request.form.get("fecha_salida"),
+                fecha_prestamo=request.form.get("fecha_prestamo"),
+                comentarios=request.form.get("comentarios_venta"),
+                fecha_registro=fecha_registro
+            )
 
-            elif tipo_movimiento == "credito":
-                producto.estado = "credito"
+            db.session.add(movimiento)
+            db.session.flush()
 
-            elif tipo_movimiento == "prestado":
-                producto.estado = "prestado"
+            if tipo_movimiento == "credito":
+                credito_nuevo = CreditoVenta(
+                    movimiento_id=movimiento.id,
+                    producto_id=producto.id,
+                    cliente=request.form.get("vendido_a"),
+                    cantidad=cantidad,
+                    precio_unitario=precio_unitario,
+                    total=total_movimiento,
+                    estado="credito",
+                    fecha_salida=request.form.get("fecha_salida"),
+                    comentarios=request.form.get("comentarios_venta")
+                )
+
+                db.session.add(credito_nuevo)
+
+            # Se mantiene compatibilidad con pantallas anteriores que leen estado del producto.
+            if producto.stock <= 0:
+                producto.stock = 0
+                producto.estado = tipo_movimiento
+            else:
+                producto.estado = "disponible"
 
             producto.vendido_a = request.form.get("vendido_a")
             producto.metodo_pago = request.form.get("metodo_pago")
@@ -735,12 +864,12 @@ def ventas():
 
             db.session.commit()
 
-            mensaje = f"Movimiento registrado correctamente. Cantidad: {cantidad}"
+            mensaje = f"Movimiento registrado correctamente. Cantidad: {cantidad}. Total: ${total_movimiento}"
 
     productos = Producto.query.filter(Producto.stock > 0).all()
 
-    movimientos = Producto.query.filter(
-        Producto.estado.in_(["vendido", "credito", "prestado"])
+    movimientos = Movimiento.query.order_by(
+        Movimiento.id.desc()
     ).all()
 
     return render_template(
@@ -761,28 +890,34 @@ def creditos():
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
-    productos_credito = Producto.query.filter(
-        Producto.estado.in_(["credito", "pagado"])
+    creditos_bd = CreditoVenta.query.order_by(
+        CreditoVenta.id.desc()
     ).all()
 
     creditos_lista = []
 
-    for producto in productos_credito:
-        total = calcular_total_credito(producto)
-        abonado = calcular_abonado(producto.id)
-        saldo = round(max(total - abonado, 0), 2)
-        pagado = producto.estado == "pagado" or saldo <= 0
+    for credito_item in creditos_bd:
+        abonado, saldo = calcular_saldo_credito(credito_item)
 
-        if pagado and producto.estado != "pagado":
-            producto.estado = "pagado"
+        if saldo <= 0 and credito_item.estado != "pagado":
+            credito_item.estado = "pagado"
+
+            if credito_item.movimiento:
+                credito_item.movimiento.estado = "pagado"
+
             db.session.commit()
 
         creditos_lista.append({
-            "producto": producto,
-            "total": round(total, 2),
+            "id": credito_item.id,
+            "producto": credito_item.producto,
+            "cliente": credito_item.cliente,
+            "cantidad": credito_item.cantidad,
+            "total": round(credito_item.total or 0, 2),
             "abonado": round(abonado, 2),
             "saldo": round(saldo, 2),
-            "pagado": pagado
+            "estado": credito_item.estado,
+            "fecha_salida": credito_item.fecha_salida,
+            "comentarios": credito_item.comentarios
         })
 
     return render_template(
@@ -796,9 +931,9 @@ def abonar_credito(id):
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
-    producto = Producto.query.get_or_404(id)
+    credito_item = CreditoVenta.query.get_or_404(id)
 
-    if producto.estado not in ["credito", "pagado"]:
+    if credito_item.estado == "pagado":
         return redirect("/creditos")
 
     try:
@@ -809,20 +944,22 @@ def abonar_credito(id):
     if monto <= 0:
         return redirect("/creditos")
 
-    total = calcular_total_credito(producto)
-    abonado_actual = calcular_abonado(producto.id)
-    saldo_actual = max(total - abonado_actual, 0)
+    abonado_actual, saldo_actual = calcular_saldo_credito(credito_item)
 
     if saldo_actual <= 0:
-        producto.estado = "pagado"
+        credito_item.estado = "pagado"
+
+        if credito_item.movimiento:
+            credito_item.movimiento.estado = "pagado"
+
         db.session.commit()
         return redirect("/creditos")
 
     if monto > saldo_actual:
         monto = saldo_actual
 
-    abono = AbonoCredito(
-        producto_id=producto.id,
+    abono = AbonoCreditoVenta(
+        credito_id=credito_item.id,
         monto=monto,
         fecha=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         comentario=f"Abono registrado por {session.get('usuario', 'usuario')}"
@@ -831,10 +968,14 @@ def abonar_credito(id):
     db.session.add(abono)
 
     nuevo_abonado = abonado_actual + monto
+    total_credito = credito_item.total or 0
 
-    if nuevo_abonado >= total:
-        producto.estado = "pagado"
-        producto.metodo_pago = "Crédito liquidado"
+    if nuevo_abonado >= total_credito:
+        credito_item.estado = "pagado"
+
+        if credito_item.movimiento:
+            credito_item.movimiento.estado = "pagado"
+            credito_item.movimiento.metodo_pago = "Crédito liquidado"
 
     db.session.commit()
 
@@ -846,26 +987,28 @@ def marcar_pagado(id):
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
-    producto = Producto.query.get_or_404(id)
+    credito_item = CreditoVenta.query.get_or_404(id)
 
-    if producto.estado not in ["credito", "pagado"]:
+    if credito_item.estado == "pagado":
         return redirect("/creditos")
 
-    total = calcular_total_credito(producto)
-    abonado_actual = calcular_abonado(producto.id)
-    saldo = round(max(total - abonado_actual, 0), 2)
+    abonado_actual, saldo = calcular_saldo_credito(credito_item)
 
     if saldo > 0:
-        abono = AbonoCredito(
-            producto_id=producto.id,
+        abono = AbonoCreditoVenta(
+            credito_id=credito_item.id,
             monto=saldo,
             fecha=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             comentario=f"Liquidado por {session.get('usuario', 'usuario')}"
         )
         db.session.add(abono)
 
-    producto.estado = "pagado"
-    producto.metodo_pago = "Crédito liquidado"
+    credito_item.estado = "pagado"
+
+    if credito_item.movimiento:
+        credito_item.movimiento.estado = "pagado"
+        credito_item.movimiento.metodo_pago = "Crédito liquidado"
+
     db.session.commit()
 
     return redirect("/creditos")
@@ -880,8 +1023,10 @@ def prestamos():
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
-    prestamos = Producto.query.filter(
-        Producto.estado == "prestado"
+    prestamos = Movimiento.query.filter(
+        Movimiento.estado == "prestado"
+    ).order_by(
+        Movimiento.id.desc()
     ).all()
 
     return render_template(
@@ -895,16 +1040,19 @@ def devolver_prestamo(id):
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
-    producto = Producto.query.get_or_404(id)
+    movimiento = Movimiento.query.get_or_404(id)
+    producto = movimiento.producto
 
-    producto.estado = "disponible"
-    producto.stock += 1
-    producto.vendido_a = ""
-    producto.fecha_salida = ""
-    producto.fecha_prestamo = ""
-    producto.comentarios_venta = ""
-    producto.metodo_pago = ""
-    producto.factura = ""
+    if movimiento.estado != "prestado":
+        return redirect("/prestamos")
+
+    movimiento.estado = "devuelto"
+
+    if producto:
+        producto.stock += movimiento.cantidad or 1
+
+        if producto.stock > 0:
+            producto.estado = "disponible"
 
     db.session.commit()
 

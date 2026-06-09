@@ -37,7 +37,7 @@ Préstamos
     .prestamos-card table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1000px;
+        min-width: 1100px;
     }
 
     .prestamos-card th {
@@ -94,10 +94,12 @@ Préstamos
 
     <table>
         <tr>
+            <th>ID Movimiento</th>
             <th>Autoparte</th>
             <th>Marca</th>
             <th>Modelo</th>
             <th>Año</th>
+            <th>Cantidad</th>
             <th>Prestado a</th>
             <th>Fecha salida</th>
             <th>Fecha regreso</th>
@@ -106,20 +108,64 @@ Préstamos
             <th>Acción</th>
         </tr>
 
-        {% for producto in prestamos %}
+        {% for prestamo in prestamos %}
         <tr>
-            <td>{{ producto.autoparte }}</td>
-            <td>{{ producto.marca }}</td>
-            <td>{{ producto.modelo }}</td>
-            <td>{{ producto.anio }}</td>
-            <td>{{ producto.vendido_a }}</td>
-            <td>{{ producto.fecha_salida }}</td>
-            <td>{{ producto.fecha_prestamo }}</td>
-            <td>{{ producto.comentarios_venta }}</td>
-            <td><span class="badge-prestado">Prestado</span></td>
+            <td>{{ prestamo.id }}</td>
+
             <td>
-                <a href="/devolver/{{ producto.id }}">
-                    <button class="btn-devuelto">Marcar devuelto</button>
+                {% if prestamo.producto %}
+                    {{ prestamo.producto.autoparte or '-' }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if prestamo.producto %}
+                    {{ prestamo.producto.marca or '-' }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if prestamo.producto %}
+                    {{ prestamo.producto.modelo or '-' }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+                {% if prestamo.producto %}
+                    {{ prestamo.producto.anio or '-' }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>{{ prestamo.cantidad or 1 }}</td>
+
+            <td>{{ prestamo.cliente or '-' }}</td>
+
+            <td>{{ prestamo.fecha_salida or '-' }}</td>
+
+            <td>{{ prestamo.fecha_prestamo or '-' }}</td>
+
+            <td>{{ prestamo.comentarios or '-' }}</td>
+
+            <td>
+                <span class="badge-prestado">Prestado</span>
+            </td>
+
+            <td>
+                <a href="/devolver/{{ prestamo.id }}">
+                    <button
+                        class="btn-devuelto"
+                        onclick="return confirm('¿Marcar este préstamo como devuelto?')"
+                    >
+                        Marcar devuelto
+                    </button>
                 </a>
             </td>
         </tr>
