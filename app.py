@@ -655,40 +655,9 @@ def dashboard():
     disponibles = Producto.query.filter(Producto.stock > 0).count()
     agotados = Producto.query.filter(Producto.stock == 0).count()
 
-    productos_vendidos = Producto.query.filter(
-        Producto.estado.in_(["vendido", "pagado"])
-    ).all()
-
-    productos_credito = Producto.query.filter(
-        Producto.estado == "credito"
-    ).all()
-
-    productos_prestados = Producto.query.filter(
-        Producto.estado == "prestado"
-    ).all()
-
-    vendidas = len(productos_vendidos)
-    prestadas = len(productos_prestados)
-
-    monto_vendido = 0
-    for producto in productos_vendidos:
-        monto_vendido += calcular_total_credito(producto)
-
-    credito = 0
-    monto_credito = 0
-
-    for producto in productos_credito:
-        total_credito = calcular_total_credito(producto)
-        abonado = calcular_abonado(producto.id)
-        saldo = round(max(total_credito - abonado, 0), 2)
-
-        if saldo > 0:
-            credito += 1
-            monto_credito += saldo
-        else:
-            producto.estado = "pagado"
-
-    db.session.commit()
+    vendidas = Producto.query.filter(Producto.estado == "vendido").count()
+    prestadas = Producto.query.filter(Producto.estado == "prestado").count()
+    credito = Producto.query.filter(Producto.estado == "credito").count()
 
     facturadas = Producto.query.filter(
         Producto.factura.isnot(None),
@@ -697,42 +666,11 @@ def dashboard():
     ).count()
 
     valor_total = 0
-    resumen_propiedades = {}
 
     for producto in productos:
         precio = producto.costo_venta or 0
         stock = producto.stock or 0
-        valor_producto = precio * stock
-        valor_total += valor_producto
-
-        propiedad = (producto.propiedad or "SIN PROPIEDAD").strip().upper()
-
-        if not propiedad:
-            propiedad = "SIN PROPIEDAD"
-
-        if propiedad not in resumen_propiedades:
-            resumen_propiedades[propiedad] = {
-                "piezas": 0,
-                "stock": 0,
-                "valor": 0
-            }
-
-        resumen_propiedades[propiedad]["piezas"] += 1
-        resumen_propiedades[propiedad]["stock"] += stock
-        resumen_propiedades[propiedad]["valor"] += valor_producto
-
-    resumen_propiedades = dict(
-        sorted(
-            resumen_propiedades.items(),
-            key=lambda item: item[0]
-        )
-    )
-
-    for propiedad in resumen_propiedades:
-        resumen_propiedades[propiedad]["valor"] = round(
-            resumen_propiedades[propiedad]["valor"],
-            2
-        )
+        valor_total += precio * stock
 
     return render_template(
         "dashboard.html",
@@ -741,12 +679,9 @@ def dashboard():
         agotados=agotados,
         valor_total=round(valor_total, 2),
         vendidas=vendidas,
-        monto_vendido=round(monto_vendido, 2),
         prestadas=prestadas,
         credito=credito,
-        monto_credito=round(monto_credito, 2),
-        facturadas=facturadas,
-        resumen_propiedades=resumen_propiedades
+        facturadas=facturadas
     )
 
 
