@@ -89,6 +89,41 @@ Ventas y préstamos
         margin-bottom: 18px;
     }
 
+    .filtros-movimientos {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 18px;
+        background: #f3f4f6;
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    .filtros-movimientos input,
+    .filtros-movimientos select {
+        width: 100%;
+        padding: 11px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+    }
+
+    .btn-limpiar {
+        background: #6b7280;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 11px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .contador-resultados {
+        margin-bottom: 12px;
+        color: #4b5563;
+        font-weight: bold;
+    }
+
     .ventas-table table {
         width: 100%;
         border-collapse: collapse;
@@ -133,6 +168,11 @@ Ventas y préstamos
         color: #166534;
     }
 
+    .badge-devuelto {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
     .alerta-ok {
         background: #dcfce7;
         color: #166534;
@@ -154,6 +194,12 @@ Ventas y préstamos
     .monto {
         font-weight: bold;
         color: #111827;
+    }
+
+    @media (max-width: 900px) {
+        .filtros-movimientos {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 768px) {
@@ -261,7 +307,47 @@ Ventas y préstamos
 <div class="ventas-table">
     <h2>Historial de movimientos</h2>
 
-    <table>
+    <div class="filtros-movimientos">
+
+        <input
+            type="text"
+            id="filtroTexto"
+            placeholder="Buscar por autoparte, cliente, método, factura o comentario..."
+            onkeyup="filtrarMovimientos()"
+        >
+
+        <select id="filtroEstado" onchange="filtrarMovimientos()">
+            <option value="">Todos los estados</option>
+            <option value="vendido">Vendido</option>
+            <option value="credito">Crédito</option>
+            <option value="pagado">Pagado</option>
+            <option value="prestado">Prestado</option>
+            <option value="devuelto">Devuelto</option>
+        </select>
+
+        <input
+            type="date"
+            id="fechaDesde"
+            onchange="filtrarMovimientos()"
+        >
+
+        <input
+            type="date"
+            id="fechaHasta"
+            onchange="filtrarMovimientos()"
+        >
+
+        <button type="button" class="btn-limpiar" onclick="limpiarFiltros()">
+            Limpiar filtros
+        </button>
+
+    </div>
+
+    <div class="contador-resultados">
+        Resultados visibles: <span id="contadorMovimientos">0</span>
+    </div>
+
+    <table id="tablaMovimientos">
         <tr>
             <th>ID Movimiento</th>
             <th>Autoparte</th>
@@ -277,7 +363,27 @@ Ventas y préstamos
         </tr>
 
         {% for movimiento in movimientos %}
-        <tr>
+        <tr
+            class="fila-movimiento"
+            data-texto="
+                {{ movimiento.id }}
+                {% if movimiento.producto %}
+                    {{ movimiento.producto.autoparte }}
+                    {{ movimiento.producto.marca }}
+                    {{ movimiento.producto.modelo }}
+                    {{ movimiento.producto.anio }}
+                {% endif %}
+                {{ movimiento.cliente }}
+                {{ movimiento.estado }}
+                {{ movimiento.metodo_pago }}
+                {{ movimiento.factura }}
+                {{ movimiento.fecha_salida }}
+                {{ movimiento.fecha_prestamo }}
+                {{ movimiento.comentarios }}
+            "
+            data-estado="{{ movimiento.estado or '' }}"
+            data-fecha="{{ movimiento.fecha_salida or '' }}"
+        >
             <td>{{ movimiento.id }}</td>
 
             <td>
@@ -299,6 +405,8 @@ Ventas y préstamos
                     <span class="badge badge-credito">Crédito</span>
                 {% elif movimiento.estado == "pagado" %}
                     <span class="badge badge-pagado">Pagado</span>
+                {% elif movimiento.estado == "devuelto" %}
+                    <span class="badge badge-devuelto">Devuelto</span>
                 {% else %}
                     {{ movimiento.estado }}
                 {% endif %}
@@ -329,12 +437,69 @@ function filtrarProductos() {
 
     for (let i = 1; i < opciones.length; i++) {
         let texto = opciones[i].getAttribute("data-texto").toLowerCase();
-
         let coincide = palabras.every(palabra => texto.includes(palabra));
-
         opciones[i].style.display = coincide ? "" : "none";
     }
 }
+
+function filtrarMovimientos() {
+    let texto = document.getElementById("filtroTexto").value.toLowerCase().trim();
+    let estado = document.getElementById("filtroEstado").value.toLowerCase().trim();
+    let fechaDesde = document.getElementById("fechaDesde").value;
+    let fechaHasta = document.getElementById("fechaHasta").value;
+    let filas = document.querySelectorAll(".fila-movimiento");
+    let contador = 0;
+
+    filas.forEach(fila => {
+        let textoFila = (fila.getAttribute("data-texto") || "").toLowerCase();
+        let estadoFila = (fila.getAttribute("data-estado") || "").toLowerCase();
+        let fechaFila = fila.getAttribute("data-fecha") || "";
+
+        let coincideTexto = true;
+        let coincideEstado = true;
+        let coincideFecha = true;
+
+        if (texto) {
+            let palabras = texto.split(" ").filter(p => p.length > 0);
+            coincideTexto = palabras.every(palabra => textoFila.includes(palabra));
+        }
+
+        if (estado) {
+            coincideEstado = estadoFila === estado;
+        }
+
+        if (fechaDesde && fechaFila) {
+            coincideFecha = fechaFila >= fechaDesde;
+        }
+
+        if (fechaHasta && fechaFila) {
+            coincideFecha = coincideFecha && fechaFila <= fechaHasta;
+        }
+
+        if ((fechaDesde || fechaHasta) && !fechaFila) {
+            coincideFecha = false;
+        }
+
+        if (coincideTexto && coincideEstado && coincideFecha) {
+            fila.style.display = "";
+            contador++;
+        } else {
+            fila.style.display = "none";
+        }
+    });
+
+    document.getElementById("contadorMovimientos").textContent = contador;
+}
+
+function limpiarFiltros() {
+    document.getElementById("filtroTexto").value = "";
+    document.getElementById("filtroEstado").value = "";
+    document.getElementById("fechaDesde").value = "";
+    document.getElementById("fechaHasta").value = "";
+    filtrarMovimientos();
+}
+
+document.addEventListener("DOMContentLoaded", filtrarMovimientos);
 </script>
 
 {% endblock %}
