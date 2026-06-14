@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from openpyxl import load_workbook
 from urllib.parse import quote_plus
@@ -7,11 +7,27 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
+import requests
 
 app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
+
+# =========================
+# MERCADO LIBRE
+# =========================
+
+MELI_APP_ID = os.getenv("MELI_APP_ID", "516751596401763")
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "hbCxZsXAJc6i2OYLtkUYzpMwsQ39IxeJ")
+MELI_REDIRECT_URI = os.getenv(
+    "MELI_REDIRECT_URI",
+    "https://prueba-autopartes.onrender.com/mercadolibre/callback"
+)
+
+MELI_AUTH_URL = "https://auth.mercadolibre.com.mx/authorization"
+MELI_TOKEN_URL = "https://api.mercadolibre.com/oauth/token"
+MELI_API_URL = "https://api.mercadolibre.com"
 
 # =========================
 # BASE DE DATOS
@@ -183,6 +199,20 @@ class Usuario(db.Model):
     rol = db.Column(db.String(50), default="vendedor")
     activo = db.Column(db.Boolean, default=True)
 
+class MercadoLibreToken(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.String(100))
+    access_token = db.Column(db.Text)
+    refresh_token = db.Column(db.Text)
+    expires_at = db.Column(db.DateTime)
+
+    scope = db.Column(db.String(300))
+    token_type = db.Column(db.String(50))
+
+    fecha_conexion = db.Column(db.String(100))
+    fecha_actualizacion = db.Column(db.String(100))
+
 
 class Movimiento(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -283,6 +313,112 @@ def home():
         productos=productos_paginados.items,
         paginacion=productos_paginados
     )
+
+
+# =========================
+# RUTAS MERCADO LIBRE
+# =========================
+
+@app.route("/mercadolibre")
+def mercadolibre():
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    token = MercadoLibreToken.query.order_by(MercadoLibreToken.id.desc()).first()
+
+    return render_template(
+        "mercadolibre.html",
+        token=token,
+        meli_app_id=MELI_APP_ID,
+        meli_redirect_uri=MELI_REDIRECT_URI
+    )
+
+@app.route("/mercadolibre/webhook", methods=["POST", "GET"])
+def mercadolibre_webhook():
+    return "OK", 200
+
+
+@app.route("/mercadolibre/conectar")
+def mercadolibre_conectar():
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    if not MELI_APP_ID or not MELI_REDIRECT_URI:
+        return "Faltan variables MELI_APP_ID o MELI_REDIRECT_URI", 500
+
+    url_autorizacion = (
+        f"{MELI_AUTH_URL}"
+        f"?response_type=code"
+        f"&client_id={MELI_APP_ID}"
+        f"&redirect_uri={MELI_REDIRECT_URI}"
+    )
+
+    return redirect(url_autorizacion)
+
+
+@app.route("/mercadolibre/callback")
+def mercadolibre_callback():
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    code = request.args.get("code")
+
+    if not code:
+        return "No se recibió code de Mercado Libre.", 400
+
+    if not MELI_APP_ID or not MELI_CLIENT_SECRET or not MELI_REDIRECT_URI:
+        return "Faltan variables de Mercado Libre en el servidor.", 500
+
+    payload = {
+        "grant_type": "authorization_code",
+        "client_id": MELI_APP_ID,
+        "client_secret": MELI_CLIENT_SECRET,
+        "code": code,
+        "redirect_uri": MELI_REDIRECT_URI
+    }
+
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded"
+    }
+
+    respuesta = requests.post(
+        MELI_TOKEN_URL,
+        data=payload,
+        headers=headers,
+        timeout=20
+    )
+
+    if respuesta.status_code not in [200, 201]:
+        print("ERROR MERCADO LIBRE TOKEN:")
+        print(respuesta.status_code)
+        print(respuesta.text)
+        return f"Error al obtener token de Mercado Libre: {respuesta.text}", 400
+
+    datos = respuesta.json()
+
+    expires_in = datos.get("expires_in", 0)
+    expires_at = datetime.now() + timedelta(seconds=expires_in)
+
+    token = MercadoLibreToken.query.order_by(MercadoLibreToken.id.desc()).first()
+
+    if not token:
+        token = MercadoLibreToken()
+
+    token.user_id = str(datos.get("user_id", ""))
+    token.access_token = datos.get("access_token")
+    token.refresh_token = datos.get("refresh_token")
+    token.expires_at = expires_at
+    token.scope = datos.get("scope")
+    token.token_type = datos.get("token_type")
+    token.fecha_conexion = token.fecha_conexion or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    token.fecha_actualizacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    db.session.add(token)
+    db.session.commit()
+
+    return redirect("/mercadolibre")
+
 
 
 # =========================

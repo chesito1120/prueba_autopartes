@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block titulo %}
+Mercado Libre
+{% endblock %}
+
+{% block contenido %}
+
+<style>
+    .ml-header {
+        margin-bottom: 28px;
+    }
+
+    .ml-header h1 {
+        font-size: 34px;
+        margin-bottom: 8px;
+        color: white;
+    }
+
+    .ml-header p {
+        color: #d1d5db;
+    }
+
+    .ml-card {
+        background: #ffffff;
+        color: #111827;
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        margin-bottom: 25px;
+    }
+
+    .ml-card h2 {
+        margin-bottom: 14px;
+        color: #111827;
+    }
+
+    .ml-info {
+        background: #f4f6f9;
+        border: 1px solid #d1d5db;
+        padding: 18px;
+        border-radius: 14px;
+        margin-top: 15px;
+    }
+
+    .ml-info p {
+        margin: 8px 0;
+        color: #374151;
+    }
+
+    .btn-ml {
+        display: inline-block;
+        background: #f59e0b;
+        color: #111827;
+        padding: 13px 22px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        margin-top: 15px;
+    }
+
+    .btn-ml:hover {
+        background: #d97706;
+        color: white;
+    }
+
+    .estado-conectado {
+        display: inline-block;
+        background: #16a34a;
+        color: white;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-weight: bold;
+    }
+
+    .estado-desconectado {
+        display: inline-block;
+        background: #dc2626;
+        color: white;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-weight: bold;
+    }
+
+    code {
+        background: #e5e7eb;
+        padding: 3px 7px;
+        border-radius: 6px;
+    }
+</style>
+
+<div class="ml-header">
+    <h1>Mercado Libre</h1>
+    <p>Conecta la cuenta de Mercado Libre para sincronizar publicaciones con el inventario.</p>
+</div>
+
+<div class="ml-card">
+    <h2>Estado de conexión</h2>
+
+    {% if token and token.access_token %}
+        <span class="estado-conectado">Cuenta conectada</span>
+
+        <div class="ml-info">
+            <p><strong>User ID:</strong> {{ token.user_id }}</p>
+            <p><strong>Scope:</strong> {{ token.scope }}</p>
+            <p><strong>Tipo token:</strong> {{ token.token_type }}</p>
+            <p><strong>Expira:</strong> {{ token.expires_at }}</p>
+            <p><strong>Fecha conexión:</strong> {{ token.fecha_conexion }}</p>
+            <p><strong>Última actualización:</strong> {{ token.fecha_actualizacion }}</p>
+        </div>
+    {% else %}
+        <span class="estado-desconectado">No conectada</span>
+
+        <p style="margin-top: 15px;">
+            Todavía no se ha conectado una cuenta de Mercado Libre.
+        </p>
+    {% endif %}
+
+    <a href="/mercadolibre/conectar" class="btn-ml">
+        Conectar Mercado Libre
+    </a>
+</div>
+
+<div class="ml-card">
+    <h2>Configuración actual</h2>
+
+    <div class="ml-info">
+        <p><strong>APP ID:</strong> {{ meli_app_id if meli_app_id else "No configurado" }}</p>
+        <p><strong>Redirect URI:</strong> <code>{{ meli_redirect_uri }}</code></p>
+    </div>
+</div>
+
+{% endblock %}
