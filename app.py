@@ -421,6 +421,28 @@ def mercadolibre_callback():
 
 
 
+@app.route("/mercadolibre/publicaciones")
+def mercadolibre_publicaciones():
+
+    token = MercadoLibreToken.query.first()
+
+    if not token:
+        return "No existe conexión con Mercado Libre"
+
+    headers = {
+        "Authorization": f"Bearer {token.access_token}"
+    }
+
+    respuesta = requests.get(
+        f"https://api.mercadolibre.com/users/{token.user_id}/items/search",
+        headers=headers,
+        timeout=20
+    )
+
+    return respuesta.text
+
+
+
 # =========================
 # LOGIN
 # =========================
