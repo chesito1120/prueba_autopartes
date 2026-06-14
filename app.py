@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from openpyxl import load_workbook
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -19,7 +19,7 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 # =========================
 
 MELI_APP_ID = os.getenv("MELI_APP_ID", "516751596401763")
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "hbCxZsXAJc6i2OYLtkUYzpMwsQ39IxeJ")
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "aLvmsfXSpLcavxUrYFfwPLCr9y4Kio5X")
 MELI_REDIRECT_URI = os.getenv(
     "MELI_REDIRECT_URI",
     "https://prueba-autopartes.onrender.com/mercadolibre/callback"
@@ -28,6 +28,8 @@ MELI_REDIRECT_URI = os.getenv(
 MELI_AUTH_URL = "https://auth.mercadolibre.com.mx/authorization"
 MELI_TOKEN_URL = "https://api.mercadolibre.com/oauth/token"
 MELI_API_URL = "https://api.mercadolibre.com"
+
+CRON_SECRET = os.getenv("CRON_SECRET", "autopartes_ch_sync_2026")
 
 # =========================
 # BASE DE DATOS
@@ -109,6 +111,73 @@ def guardar_varias_imagenes(archivos):
 
         if len(fotos) == 5:
             break
+
+    return "|".join(fotos)
+
+
+def descargar_imagen_ml(url_imagen):
+    if not url_imagen:
+        return ""
+
+    try:
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+        respuesta = requests.get(url_imagen, timeout=20)
+
+        if respuesta.status_code != 200:
+            return ""
+
+        content_type = respuesta.headers.get("Content-Type", "").lower()
+
+        if "jpeg" in content_type or "jpg" in content_type:
+            extension = "jpg"
+        elif "png" in content_type:
+            extension = "png"
+        elif "webp" in content_type:
+            extension = "webp"
+        else:
+            extension = "jpg"
+
+        nombre_archivo = f"ml_{uuid.uuid4().hex}.{extension}"
+        ruta = os.path.join(app.config["UPLOAD_FOLDER"], nombre_archivo)
+
+        with open(ruta, "wb") as archivo:
+            archivo.write(respuesta.content)
+
+        return nombre_archivo
+
+    except Exception as e:
+        print("ERROR descargando imagen ML:", e)
+        return ""
+
+
+def descargar_imagenes_ml(item):
+    fotos = []
+
+    pictures = item.get("pictures") or []
+
+    for picture in pictures:
+        url_imagen = (
+            picture.get("secure_url")
+            or picture.get("url")
+            or picture.get("max_size")
+        )
+
+        nombre = descargar_imagen_ml(url_imagen)
+
+        if nombre:
+            fotos.append(nombre)
+
+        if len(fotos) == 5:
+            break
+
+    if not fotos:
+        thumbnail = item.get("secure_thumbnail") or item.get("thumbnail")
+
+        nombre = descargar_imagen_ml(thumbnail)
+
+        if nombre:
+            fotos.append(nombre)
 
     return "|".join(fotos)
 
@@ -199,6 +268,7 @@ class Usuario(db.Model):
     rol = db.Column(db.String(50), default="vendedor")
     activo = db.Column(db.Boolean, default=True)
 
+
 class MercadoLibreToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
@@ -212,6 +282,20 @@ class MercadoLibreToken(db.Model):
 
     fecha_conexion = db.Column(db.String(100))
     fecha_actualizacion = db.Column(db.String(100))
+
+
+class MercadoLibreProducto(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    ml_item_id = db.Column(db.String(100), unique=True, nullable=False)
+
+    producto_id = db.Column(db.Integer, db.ForeignKey("producto.id"), nullable=False)
+    producto = db.relationship("Producto", backref="mercadolibre_sync")
+
+    ml_status = db.Column(db.String(100))
+    ml_permalink = db.Column(db.String(500))
+    ml_last_updated = db.Column(db.String(100))
+    fecha_sync = db.Column(db.String(100))
 
 
 class Movimiento(db.Model):
@@ -294,6 +378,298 @@ class Producto(db.Model):
 
 
 # =========================
+# FUNCIONES MERCADO LIBRE
+# =========================
+
+def obtener_token_ml():
+    token = MercadoLibreToken.query.order_by(MercadoLibreToken.id.desc()).first()
+
+    if not token:
+        return None, "No existe conexión con Mercado Libre."
+
+    if not token.access_token:
+        return None, "No existe access token de Mercado Libre."
+
+    if token.expires_at and datetime.now() < token.expires_at - timedelta(minutes=10):
+        return token, None
+
+    if not token.refresh_token:
+        return None, "No existe refresh token para renovar Mercado Libre."
+
+    payload = {
+        "grant_type": "refresh_token",
+        "client_id": MELI_APP_ID,
+        "client_secret": MELI_CLIENT_SECRET,
+        "refresh_token": token.refresh_token
+    }
+
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded"
+    }
+
+    respuesta = requests.post(
+        MELI_TOKEN_URL,
+        data=payload,
+        headers=headers,
+        timeout=20
+    )
+
+    if respuesta.status_code not in [200, 201]:
+        print("ERROR REFRESH TOKEN ML:")
+        print(respuesta.status_code)
+        print(respuesta.text)
+        return None, f"Error renovando token ML: {respuesta.text}"
+
+    datos = respuesta.json()
+
+    token.access_token = datos.get("access_token")
+    token.refresh_token = datos.get("refresh_token")
+    token.expires_at = datetime.now() + timedelta(seconds=datos.get("expires_in", 0))
+    token.scope = datos.get("scope")
+    token.token_type = datos.get("token_type")
+    token.fecha_actualizacion = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    db.session.commit()
+
+    return token, None
+
+
+def ml_get(url, token):
+    headers = {
+        "Authorization": f"Bearer {token.access_token}"
+    }
+
+    return requests.get(
+        url,
+        headers=headers,
+        timeout=30
+    )
+
+
+def obtener_ids_publicaciones_ml(token):
+    item_ids = []
+    offset = 0
+    limit = 50
+
+    while True:
+        url = (
+            f"{MELI_API_URL}/users/{token.user_id}/items/search"
+            f"?status=active"
+            f"&limit={limit}"
+            f"&offset={offset}"
+        )
+
+        respuesta = ml_get(url, token)
+
+        if respuesta.status_code != 200:
+            return item_ids, f"Error obteniendo publicaciones: {respuesta.text}"
+
+        datos = respuesta.json()
+        resultados = datos.get("results", [])
+
+        if not resultados:
+            break
+
+        item_ids.extend(resultados)
+
+        paging = datos.get("paging", {})
+        total = paging.get("total", 0)
+
+        offset += limit
+
+        if offset >= total:
+            break
+
+        if len(item_ids) >= 1000:
+            break
+
+    return item_ids, None
+
+
+def obtener_detalles_items_ml(token, item_ids):
+    detalles = []
+
+    for i in range(0, len(item_ids), 20):
+        bloque = item_ids[i:i + 20]
+        ids = ",".join(bloque)
+
+        attributes = ",".join([
+            "id",
+            "title",
+            "price",
+            "available_quantity",
+            "permalink",
+            "thumbnail",
+            "secure_thumbnail",
+            "pictures",
+            "status",
+            "last_updated",
+            "category_id",
+            "attributes"
+        ])
+
+        url = f"{MELI_API_URL}/items?ids={ids}&attributes={attributes}"
+
+        respuesta = ml_get(url, token)
+
+        if respuesta.status_code != 200:
+            print("ERROR multiget ML:", respuesta.text)
+            continue
+
+        datos = respuesta.json()
+
+        for item_respuesta in datos:
+            if item_respuesta.get("code") == 200:
+                body = item_respuesta.get("body") or {}
+                detalles.append(body)
+
+    return detalles
+
+
+def obtener_atributo_ml(item, atributo_id):
+    atributos = item.get("attributes") or []
+
+    for atributo in atributos:
+        if atributo.get("id") == atributo_id:
+            return atributo.get("value_name") or ""
+
+    return ""
+
+
+def sincronizar_publicaciones_mercadolibre():
+    token, error = obtener_token_ml()
+
+    if error:
+        return error
+
+    item_ids, error_ids = obtener_ids_publicaciones_ml(token)
+
+    if error_ids:
+        return error_ids
+
+    if not item_ids:
+        return "Sincronización finalizada. No se encontraron publicaciones activas en Mercado Libre."
+
+    detalles = obtener_detalles_items_ml(token, item_ids)
+
+    creados = 0
+    actualizados = 0
+    pausados = 0
+    errores = 0
+
+    ids_activos_ml = set()
+
+    for item in detalles:
+        try:
+            ml_item_id = item.get("id")
+
+            if not ml_item_id:
+                errores += 1
+                continue
+
+            ids_activos_ml.add(ml_item_id)
+
+            status = item.get("status") or ""
+            titulo = item.get("title") or "Publicación Mercado Libre"
+            precio = float(item.get("price") or 0)
+            stock = int(item.get("available_quantity") or 0)
+            permalink = item.get("permalink") or ""
+            last_updated = item.get("last_updated") or ""
+
+            marca = obtener_atributo_ml(item, "BRAND")
+            modelo = obtener_atributo_ml(item, "MODEL")
+            lado = obtener_atributo_ml(item, "SIDE")
+            motor = obtener_atributo_ml(item, "ENGINE")
+            transmision = obtener_atributo_ml(item, "TRANSMISSION")
+
+            sync = MercadoLibreProducto.query.filter_by(
+                ml_item_id=ml_item_id
+            ).first()
+
+            if sync:
+                producto = sync.producto
+                actualizados += 1
+            else:
+                producto = Producto()
+                db.session.add(producto)
+                db.session.flush()
+
+                sync = MercadoLibreProducto(
+                    ml_item_id=ml_item_id,
+                    producto_id=producto.id
+                )
+
+                db.session.add(sync)
+                creados += 1
+
+            producto.autoparte = titulo
+            producto.costo_venta = precio
+            producto.stock = stock
+            producto.link_ml = permalink
+            producto.estado = "disponible" if stock > 0 and status == "active" else "agotado"
+
+            if marca:
+                producto.marca = marca
+
+            if modelo:
+                producto.modelo = modelo
+
+            if lado:
+                producto.lado = lado
+
+            if motor:
+                producto.motor = motor
+
+            if transmision:
+                producto.transmision = transmision
+
+            producto.origen = "Mercado Libre"
+            producto.tipo = producto.tipo or "Mercado Libre"
+            producto.propiedad = producto.propiedad or "SIN PROPIEDAD"
+
+            if not producto.foto:
+                fotos_ml = descargar_imagenes_ml(item)
+
+                if fotos_ml:
+                    producto.foto = fotos_ml
+
+            sync.ml_status = status
+            sync.ml_permalink = permalink
+            sync.ml_last_updated = last_updated
+            sync.fecha_sync = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        except Exception as e:
+            print("ERROR sincronizando item ML:", e)
+            errores += 1
+
+    syncs = MercadoLibreProducto.query.all()
+
+    for sync in syncs:
+        if sync.ml_item_id not in ids_activos_ml:
+            producto = sync.producto
+
+            if producto:
+                producto.stock = 0
+                producto.estado = "agotado"
+
+            sync.ml_status = "no_activo"
+            sync.fecha_sync = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            pausados += 1
+
+    db.session.commit()
+
+    return (
+        f"Sincronización Mercado Libre finalizada. "
+        f"Creados: {creados}. "
+        f"Actualizados: {actualizados}. "
+        f"Marcados como agotados/no activos: {pausados}. "
+        f"Errores: {errores}. "
+        f"Total publicaciones activas ML: {len(item_ids)}."
+    )
+
+
+# =========================
 # CATÁLOGO
 # =========================
 
@@ -302,7 +678,9 @@ def home():
     pagina = request.args.get("page", 1, type=int)
     por_pagina = 21
 
-    productos_paginados = Producto.query.paginate(
+    productos_paginados = Producto.query.filter(
+        Producto.stock > 0
+    ).paginate(
         page=pagina,
         per_page=por_pagina,
         error_out=False
@@ -333,8 +711,17 @@ def mercadolibre():
         meli_redirect_uri=MELI_REDIRECT_URI
     )
 
+
 @app.route("/mercadolibre/webhook", methods=["POST", "GET"])
 def mercadolibre_webhook():
+    if request.method == "GET":
+        return "OK", 200
+
+    data = request.get_json(silent=True) or {}
+
+    print("WEBHOOK ML RECIBIDO:")
+    print(data)
+
     return "OK", 200
 
 
@@ -346,12 +733,13 @@ def mercadolibre_conectar():
     if not MELI_APP_ID or not MELI_REDIRECT_URI:
         return "Faltan variables MELI_APP_ID o MELI_REDIRECT_URI", 500
 
-    url_autorizacion = (
-        f"{MELI_AUTH_URL}"
-        f"?response_type=code"
-        f"&client_id={MELI_APP_ID}"
-        f"&redirect_uri={MELI_REDIRECT_URI}"
-    )
+    params = {
+        "response_type": "code",
+        "client_id": MELI_APP_ID,
+        "redirect_uri": MELI_REDIRECT_URI
+    }
+
+    url_autorizacion = f"{MELI_AUTH_URL}?{urlencode(params)}"
 
     return redirect(url_autorizacion)
 
@@ -420,27 +808,41 @@ def mercadolibre_callback():
     return redirect("/mercadolibre")
 
 
-
 @app.route("/mercadolibre/publicaciones")
 def mercadolibre_publicaciones():
+    token, error = obtener_token_ml()
 
-    token = MercadoLibreToken.query.first()
+    if error:
+        return error
 
-    if not token:
-        return "No existe conexión con Mercado Libre"
-
-    headers = {
-        "Authorization": f"Bearer {token.access_token}"
-    }
-
-    respuesta = requests.get(
-        f"https://api.mercadolibre.com/users/{token.user_id}/items/search",
-        headers=headers,
-        timeout=20
+    respuesta = ml_get(
+        f"{MELI_API_URL}/users/{token.user_id}/items/search?include_filters=true",
+        token
     )
 
     return respuesta.text
 
+
+@app.route("/mercadolibre/sincronizar")
+def mercadolibre_sincronizar():
+    if session.get("rol") != "admin":
+        return redirect("/inventario")
+
+    resultado = sincronizar_publicaciones_mercadolibre()
+
+    return resultado
+
+
+@app.route("/mercadolibre/cron-sync")
+def mercadolibre_cron_sync():
+    secret = request.args.get("secret")
+
+    if secret != CRON_SECRET:
+        return "No autorizado", 401
+
+    resultado = sincronizar_publicaciones_mercadolibre()
+
+    return resultado
 
 
 # =========================
@@ -579,7 +981,6 @@ def eliminar_usuario(id):
         db.session.commit()
 
     return redirect("/usuarios")
-
 
 
 @app.route("/usuarios/reset/<int:id>", methods=["POST"])
@@ -841,7 +1242,6 @@ def dashboard():
         return redirect("/inventario")
 
     productos = Producto.query.all()
-    movimientos = Movimiento.query.all()
     creditos_pendientes = CreditoVenta.query.filter(
         CreditoVenta.estado == "credito"
     ).all()
@@ -898,8 +1298,6 @@ def dashboard():
             2
         )
 
-    # Monto vendido real:
-    # ventas de contado + abonos recibidos de créditos.
     monto_ventas_contado = db.session.query(
         db.func.coalesce(db.func.sum(Movimiento.total), 0)
     ).filter(
@@ -912,8 +1310,6 @@ def dashboard():
 
     monto_vendido = float(monto_ventas_contado or 0) + float(monto_abonos_credito or 0)
 
-    # Monto pendiente a crédito:
-    # solo suma saldos pendientes de créditos abiertos.
     monto_credito = 0
 
     for credito_item in creditos_pendientes:
@@ -1002,7 +1398,6 @@ def ventas():
 
                 db.session.add(credito_nuevo)
 
-            # Se mantiene compatibilidad con pantallas anteriores que leen estado del producto.
             if producto.stock <= 0:
                 producto.stock = 0
                 producto.estado = tipo_movimiento
