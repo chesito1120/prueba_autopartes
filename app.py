@@ -833,6 +833,20 @@ def mercadolibre_publicaciones():
 
     return respuesta.text
 
+@app.route("/mercadolibre/debug-item/<item_id>")
+def mercadolibre_debug_item(item_id):
+    token, error = obtener_token_ml()
+
+    if error:
+        return error
+
+    respuesta = ml_get(
+        f"{MELI_API_URL}/items/{item_id}",
+        token
+    )
+
+    return respuesta.text
+
 
 @app.route("/mercadolibre/sincronizar")
 def mercadolibre_sincronizar():
