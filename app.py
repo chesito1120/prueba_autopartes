@@ -9,6 +9,7 @@ import uuid
 import zipfile
 from datetime import datetime, timedelta
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -506,7 +507,8 @@ def obtener_detalles_items_ml(token, item_ids):
             "status",
             "last_updated",
             "category_id",
-            "attributes"
+            "attributes",
+            "variations"
         ])
 
         url = f"{MELI_API_URL}/items?ids={ids}&attributes={attributes}"
@@ -547,6 +549,30 @@ def obtener_atributo_variacion_ml(item, atributo_id):
                 return atributo.get("value_name") or ""
 
     return ""
+
+def extraer_modelo_anio_desde_titulo(titulo, marca=""):
+    titulo_limpio = (titulo or "").upper()
+    marca_limpia = (marca or "").upper().strip()
+
+    anio = None
+    modelo = ""
+
+    match_anio = re.search(r"(19|20)\d{2}", titulo_limpio)
+
+    if match_anio:
+        anio = int(match_anio.group(0))
+
+    if marca_limpia and marca_limpia in titulo_limpio:
+        despues_marca = titulo_limpio.split(marca_limpia, 1)[1].strip()
+        despues_marca = re.sub(r"(19|20)\d{2}.*", "", despues_marca).strip()
+        despues_marca = despues_marca.replace("-", " ").strip()
+
+        palabras = despues_marca.split()
+
+        if palabras:
+            modelo = palabras[0].title()
+
+    return modelo, anio
 
 
 def sincronizar_publicaciones_mercadolibre():
@@ -598,11 +624,21 @@ def sincronizar_publicaciones_mercadolibre():
                 or obtener_atributo_ml(item, "VEHICLE_MODEL")
                 or obtener_atributo_ml(item, "CAR_MODEL")
             )
+            
+            modelo_titulo, anio_titulo = extraer_modelo_anio_desde_titulo(titulo, marca)
+
+            if not modelo and modelo_titulo:
+                modelo = modelo_titulo
 
             anio = (
                 obtener_atributo_ml(item, "YEAR")
                 or obtener_atributo_ml(item, "VEHICLE_YEAR")
             )
+
+
+            if not anio and anio_titulo:
+                anio = anio_titulo
+            
 
             lado = (
                 obtener_atributo_ml(item, "SIDE")
