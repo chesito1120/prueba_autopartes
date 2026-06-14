@@ -587,21 +587,25 @@ def sincronizar_publicaciones_mercadolibre():
                 ml_item_id=ml_item_id
             ).first()
 
-            if sync:
+            if sync and sync.producto:
                 producto = sync.producto
                 actualizados += 1
+
             else:
                 producto = Producto()
                 db.session.add(producto)
                 db.session.flush()
 
+            if sync:
+                sync.producto_id = producto.id
+                actualizados += 1
+            else:
                 sync = MercadoLibreProducto(
                     ml_item_id=ml_item_id,
                     producto_id=producto.id
                 )
-
-                db.session.add(sync)
-                creados += 1
+              db.session.add(sync)
+              creados += 1
 
             producto.autoparte = titulo
             producto.costo_venta = precio
