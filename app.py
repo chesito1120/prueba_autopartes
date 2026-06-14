@@ -577,11 +577,34 @@ def sincronizar_publicaciones_mercadolibre():
             permalink = item.get("permalink") or ""
             last_updated = item.get("last_updated") or ""
 
-            marca = obtener_atributo_ml(item, "BRAND")
-            modelo = obtener_atributo_ml(item, "MODEL")
-            lado = obtener_atributo_ml(item, "SIDE")
-            motor = obtener_atributo_ml(item, "ENGINE")
-            transmision = obtener_atributo_ml(item, "TRANSMISSION")
+            marca = (
+                obtener_atributo_ml(item, "BRAND")
+                or obtener_atributo_ml(item, "MANUFACTURER"))
+
+            modelo = (
+                obtener_atributo_ml(item, "MODEL")
+                or obtener_atributo_ml(item, "VEHICLE_MODEL")
+                or obtener_atributo_ml(item, "CAR_MODEL")
+            )
+
+            anio = (
+                obtener_atributo_ml(item, "YEAR")
+                or obtener_atributo_ml(item, "VEHICLE_YEAR")
+            )
+
+            lado = (
+                obtener_atributo_ml(item, "SIDE")
+                or obtener_atributo_ml(item, "POSITION")
+            )
+
+            motor = (
+                obtener_atributo_ml(item, "ENGINE")
+                or obtener_atributo_ml(item, "MOTOR")
+            )
+
+            transmision = (
+                obtener_atributo_ml(item, "TRANSMISSION")
+            )
 
             sync = MercadoLibreProducto.query.filter_by(
                 ml_item_id=ml_item_id
@@ -625,6 +648,12 @@ def sincronizar_publicaciones_mercadolibre():
 
             if modelo:
                 producto.modelo = modelo
+            
+            if anio:
+                try:
+                    producto.anio = int(str(anio).split("-")[0].strip())
+                except:
+                    pass
 
             if lado:
                 producto.lado = lado
