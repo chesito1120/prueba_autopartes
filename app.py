@@ -536,6 +536,18 @@ def obtener_atributo_ml(item, atributo_id):
 
     return ""
 
+def obtener_atributo_variacion_ml(item, atributo_id):
+    variaciones = item.get("variations") or []
+
+    for variacion in variaciones:
+        combinaciones = variacion.get("attribute_combinations") or []
+
+        for atributo in combinaciones:
+            if atributo.get("id") == atributo_id:
+                return atributo.get("value_name") or ""
+
+    return ""
+
 
 def sincronizar_publicaciones_mercadolibre():
     token, error = obtener_token_ml()
@@ -595,7 +607,15 @@ def sincronizar_publicaciones_mercadolibre():
             lado = (
                 obtener_atributo_ml(item, "SIDE")
                 or obtener_atributo_ml(item, "POSITION")
+                or obtener_atributo_ml(item, "VEHICLE_PARTS_POSITION")
+                or obtener_atributo_variacion_ml(item, "VEHICLE_PARTS_POSITION")
             )
+            tipo = (
+                obtener_atributo_ml(item, "VEHICLE_TYPE")
+                or obtener_atributo_ml(item, "ITEM_CONDITION")
+            )
+
+            numero_parte = obtener_atributo_ml(item, "PART_NUMBER")
 
             motor = (
                 obtener_atributo_ml(item, "ENGINE")
@@ -667,6 +687,12 @@ def sincronizar_publicaciones_mercadolibre():
             producto.origen = "Mercado Libre"
             producto.tipo = producto.tipo or "Mercado Libre"
             producto.propiedad = producto.propiedad or "SIN PROPIEDAD"
+
+            if tipo:
+                producto.tipo = tipo
+
+            if numero_parte:
+                producto.observaciones = f"Número de parte: {numero_parte}"
 
             if not producto.foto:
                 fotos_ml = descargar_imagenes_ml(item)
