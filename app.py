@@ -587,25 +587,32 @@ def sincronizar_publicaciones_mercadolibre():
                 ml_item_id=ml_item_id
             ).first()
 
-            if sync and sync.producto:
-                producto = sync.producto
-                actualizados += 1
+            producto = None
 
+            if sync:
+                producto = Producto.query.get(sync.producto_id)
+
+                if producto:
+                    actualizados += 1
+                else:
+                    producto = Producto()
+                    db.session.add(producto)
+                    db.session.flush()
+
+                    sync.producto_id = producto.id
+                    actualizados += 1
             else:
                 producto = Producto()
                 db.session.add(producto)
                 db.session.flush()
 
-            if sync:
-                sync.producto_id = producto.id
-                actualizados += 1
-            else:
                 sync = MercadoLibreProducto(
                     ml_item_id=ml_item_id,
                     producto_id=producto.id
                 )
-              db.session.add(sync)
-              creados += 1
+
+                db.session.add(sync)
+                creados += 1
 
             producto.autoparte = titulo
             producto.costo_venta = precio
@@ -650,9 +657,9 @@ def sincronizar_publicaciones_mercadolibre():
     syncs = MercadoLibreProducto.query.all()
 
     for sync in syncs:
-        if sync.ml_item_id not in ids_activos_ml:
-            producto = sync.producto
+        producto = Producto.query.get(sync.producto_id)
 
+        if sync.ml_item_id not in ids_activos_ml:
             if producto:
                 producto.stock = 0
                 producto.estado = "agotado"
