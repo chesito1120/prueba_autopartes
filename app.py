@@ -12,6 +12,9 @@ import requests
 import re
 
 app = Flask(__name__)
+print("========== VERSION APP ==========")
+print("APP.PY POSTGRES MERCADO LIBRE 2026-06-15 V3")
+print("=================================")
 
 app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 
@@ -20,7 +23,7 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 # =========================
 
 MELI_APP_ID = os.getenv("MELI_APP_ID", "516751596401763")
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "CAMBIA_ESTA_SECRET_EN_RENDER")
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "aLvmsfXSpLcavxUrYFfwPLCr9y4Kio5X")
 MELI_REDIRECT_URI = os.getenv(
     "MELI_REDIRECT_URI",
     "https://prueba-autopartes.onrender.com/mercadolibre/callback"
