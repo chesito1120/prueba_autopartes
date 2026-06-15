@@ -20,7 +20,7 @@ app.secret_key = os.getenv("SECRET_KEY", "autopartes_secret")
 # =========================
 
 MELI_APP_ID = os.getenv("MELI_APP_ID", "516751596401763")
-MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "aLvmsfXSpLcavxUrYFfwPLCr9y4Kio5X")
+MELI_CLIENT_SECRET = os.getenv("MELI_CLIENT_SECRET", "CAMBIA_ESTA_SECRET_EN_RENDER")
 MELI_REDIRECT_URI = os.getenv(
     "MELI_REDIRECT_URI",
     "https://prueba-autopartes.onrender.com/mercadolibre/callback"
@@ -36,7 +36,9 @@ CRON_SECRET = os.getenv("CRON_SECRET", "autopartes_ch_sync_2026")
 # BASE DE DATOS
 # =========================
 
-MYSQL_URL = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
+MYSQL_URL = os.getenv("MYSQL_URL")
+DB_URL = DATABASE_URL or MYSQL_URL
 
 DB_USER = os.getenv("MYSQLUSER")
 DB_PASSWORD = os.getenv("MYSQLPASSWORD")
@@ -44,7 +46,14 @@ DB_HOST = os.getenv("MYSQLHOST")
 DB_PORT = os.getenv("MYSQLPORT")
 DB_NAME = os.getenv("MYSQLDATABASE")
 
+if DB_URL and DB_URL.startswith("postgres://"):
+    DB_URL = DB_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
+elif DB_URL and DB_URL.startswith("postgresql://"):
+    DB_URL = DB_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 print("========== DB DEBUG ==========")
+print("DATABASE_URL existe:", bool(DATABASE_URL))
 print("MYSQL_URL existe:", bool(MYSQL_URL))
 print("MYSQLUSER existe:", bool(DB_USER))
 print("MYSQLPASSWORD existe:", bool(DB_PASSWORD))
@@ -53,8 +62,8 @@ print("MYSQLPORT existe:", bool(DB_PORT))
 print("MYSQLDATABASE existe:", bool(DB_NAME))
 print("==============================")
 
-if MYSQL_URL:
-    app.config["SQLALCHEMY_DATABASE_URI"] = MYSQL_URL
+if DB_URL:
+    app.config["SQLALCHEMY_DATABASE_URI"] = DB_URL
 
 elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     DB_PASSWORD_SAFE = quote_plus(DB_PASSWORD)
@@ -64,7 +73,7 @@ elif all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
     )
 
 else:
-    print("ADVERTENCIA: No se encontraron variables MySQL completas. Usando SQLite temporal.")
+    print("ADVERTENCIA: No se encontraron variables de base de datos completas. Usando SQLite temporal.")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///autopartes_local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -538,6 +547,7 @@ def obtener_atributo_ml(item, atributo_id):
 
     return ""
 
+
 def obtener_atributo_variacion_ml(item, atributo_id):
     variaciones = item.get("variations") or []
 
@@ -549,6 +559,7 @@ def obtener_atributo_variacion_ml(item, atributo_id):
                 return atributo.get("value_name") or ""
 
     return ""
+
 
 def extraer_modelo_anio_desde_titulo(titulo, marca=""):
     titulo_limpio = (titulo or "").upper()
@@ -617,14 +628,15 @@ def sincronizar_publicaciones_mercadolibre():
 
             marca = (
                 obtener_atributo_ml(item, "BRAND")
-                or obtener_atributo_ml(item, "MANUFACTURER"))
+                or obtener_atributo_ml(item, "MANUFACTURER")
+            )
 
             modelo = (
                 obtener_atributo_ml(item, "MODEL")
                 or obtener_atributo_ml(item, "VEHICLE_MODEL")
                 or obtener_atributo_ml(item, "CAR_MODEL")
             )
-            
+
             modelo_titulo, anio_titulo = extraer_modelo_anio_desde_titulo(titulo, marca)
 
             if not modelo and modelo_titulo:
@@ -635,10 +647,8 @@ def sincronizar_publicaciones_mercadolibre():
                 or obtener_atributo_ml(item, "VEHICLE_YEAR")
             )
 
-
             if not anio and anio_titulo:
                 anio = anio_titulo
-            
 
             lado = (
                 obtener_atributo_ml(item, "SIDE")
@@ -646,6 +656,7 @@ def sincronizar_publicaciones_mercadolibre():
                 or obtener_atributo_ml(item, "VEHICLE_PARTS_POSITION")
                 or obtener_atributo_variacion_ml(item, "VEHICLE_PARTS_POSITION")
             )
+
             tipo = (
                 obtener_atributo_ml(item, "VEHICLE_TYPE")
                 or obtener_atributo_ml(item, "ITEM_CONDITION")
@@ -658,9 +669,7 @@ def sincronizar_publicaciones_mercadolibre():
                 or obtener_atributo_ml(item, "MOTOR")
             )
 
-            transmision = (
-                obtener_atributo_ml(item, "TRANSMISSION")
-            )
+            transmision = obtener_atributo_ml(item, "TRANSMISSION")
 
             sync = MercadoLibreProducto.query.filter_by(
                 ml_item_id=ml_item_id
@@ -699,36 +708,35 @@ def sincronizar_publicaciones_mercadolibre():
             producto.link_ml = permalink
             producto.estado = "disponible" if stock > 0 and status == "active" else "agotado"
 
-            if marca:
-                producto.marca = marca
+            producto.marca = marca or producto.marca
+            producto.modelo = modelo or producto.modelo or "-"
+            producto.lado = lado or producto.lado
+            producto.motor = motor or producto.motor
+            producto.transmision = transmision or producto.transmision
 
-            if modelo:
-                producto.modelo = modelo
-            
             if anio:
                 try:
                     producto.anio = int(str(anio).split("-")[0].strip())
-                except:
+                except Exception:
                     pass
 
-            if lado:
-                producto.lado = lado
-
-            if motor:
-                producto.motor = motor
-
-            if transmision:
-                producto.transmision = transmision
-
             producto.origen = "Mercado Libre"
-            producto.tipo = producto.tipo or "Mercado Libre"
+            producto.tipo = tipo or producto.tipo or "Mercado Libre"
             producto.propiedad = producto.propiedad or "SIN PROPIEDAD"
 
-            if tipo:
-                producto.tipo = tipo
+            observaciones = []
 
             if numero_parte:
-                producto.observaciones = f"Número de parte: {numero_parte}"
+                observaciones.append(f"Número de parte: {numero_parte}")
+
+            if lado:
+                observaciones.append(f"Lado/posición: {lado}")
+
+            if tipo:
+                observaciones.append(f"Tipo: {tipo}")
+
+            if observaciones:
+                producto.observaciones = " | ".join(observaciones)
 
             if not producto.foto:
                 fotos_ml = descargar_imagenes_ml(item)
@@ -923,6 +931,7 @@ def mercadolibre_publicaciones():
     )
 
     return respuesta.text
+
 
 @app.route("/mercadolibre/debug-item/<item_id>")
 def mercadolibre_debug_item(item_id):
