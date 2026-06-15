@@ -290,7 +290,7 @@ class MercadoLibreToken(db.Model):
     refresh_token = db.Column(db.Text)
     expires_at = db.Column(db.DateTime)
 
-    scope = db.Column(db.String(300))
+    scope = db.Column(db.Text)
     token_type = db.Column(db.String(50))
 
     fecha_conexion = db.Column(db.String(100))
@@ -1857,6 +1857,16 @@ with app.app_context():
         print("Contraseña temporal:", os.getenv("ADMIN_PASSWORD", "Admin12345"))
         print("CAMBIA ESTOS DATOS EN PRODUCCIÓN")
         print("====================================")
+
+        try:
+         db.session.execute(db.text(
+        "ALTER TABLE mercado_libre_token ALTER COLUMN scope TYPE TEXT"
+    ))
+    db.session.commit()
+    print("Columna scope actualizada a TEXT")
+    except Exception as e:
+    db.session.rollback()
+    print("No se modificó scope o ya estaba actualizado:", e)
 
 
 # =========================
