@@ -1839,11 +1839,24 @@ def excel():
 with app.app_context():
     db.create_all()
 
+    try:
+        db.session.execute(db.text(
+            "ALTER TABLE mercado_libre_token ALTER COLUMN scope TYPE TEXT"
+        ))
+        db.session.commit()
+        print("Columna scope actualizada a TEXT")
+
+    except Exception as e:
+        db.session.rollback()
+        print("No se modificó scope o ya estaba actualizado:", e)
+
     if Usuario.query.count() == 0:
         admin_inicial = Usuario(
             nombre="Administrador",
             correo=os.getenv("ADMIN_CORREO", "admin@autopartesch.com"),
-            password_hash=generate_password_hash(os.getenv("ADMIN_PASSWORD", "Admin12345")),
+            password_hash=generate_password_hash(
+                os.getenv("ADMIN_PASSWORD", "Admin12345")
+            ),
             rol="admin",
             activo=True
         )
@@ -1857,16 +1870,6 @@ with app.app_context():
         print("Contraseña temporal:", os.getenv("ADMIN_PASSWORD", "Admin12345"))
         print("CAMBIA ESTOS DATOS EN PRODUCCIÓN")
         print("====================================")
-
-        try:
-         db.session.execute(db.text(
-        "ALTER TABLE mercado_libre_token ALTER COLUMN scope TYPE TEXT"
-    ))
-    db.session.commit()
-    print("Columna scope actualizada a TEXT")
-    except Exception as e:
-    db.session.rollback()
-    print("No se modificó scope o ya estaba actualizado:", e)
 
 
 # =========================
