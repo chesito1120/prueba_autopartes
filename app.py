@@ -719,11 +719,13 @@ def sincronizar_publicaciones_mercadolibre():
             if observaciones:
                 producto.observaciones = " | ".join(observaciones)
 
-            if not producto.foto:
-                fotos_ml = descargar_imagenes_ml(item)
+            # Siempre actualizamos las fotos de Mercado Libre.
+            # Antes solo las guardaba si producto.foto estaba vacío, pero eso dejaba fotos viejas tipo ml_xxx.jpg.
+            # Ahora reemplaza esas fotos locales viejas por URLs directas de Mercado Libre.
+            fotos_ml = descargar_imagenes_ml(item)
 
-                if fotos_ml:
-                    producto.foto = fotos_ml
+            if fotos_ml:
+                producto.foto = fotos_ml
 
             sync.ml_status = status
             sync.ml_permalink = permalink
