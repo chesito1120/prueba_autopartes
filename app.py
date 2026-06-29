@@ -129,39 +129,12 @@ def guardar_varias_imagenes(archivos):
 
 
 def descargar_imagen_ml(url_imagen):
-    if not url_imagen:
-        return ""
-
-    try:
-        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-
-        respuesta = requests.get(url_imagen, timeout=20)
-
-        if respuesta.status_code != 200:
-            return ""
-
-        content_type = respuesta.headers.get("Content-Type", "").lower()
-
-        if "jpeg" in content_type or "jpg" in content_type:
-            extension = "jpg"
-        elif "png" in content_type:
-            extension = "png"
-        elif "webp" in content_type:
-            extension = "webp"
-        else:
-            extension = "jpg"
-
-        nombre_archivo = f"ml_{uuid.uuid4().hex}.{extension}"
-        ruta = os.path.join(app.config["UPLOAD_FOLDER"], nombre_archivo)
-
-        with open(ruta, "wb") as archivo:
-            archivo.write(respuesta.content)
-
-        return nombre_archivo
-
-    except Exception as e:
-        print("ERROR descargando imagen ML:", e)
-        return ""
+    """
+    Para imágenes de Mercado Libre NO descargamos el archivo al servidor.
+    Render no conserva archivos descargados después de redeploys y además la descarga puede causar timeout.
+    Por eso guardamos directamente la URL HTTPS de Mercado Libre.
+    """
+    return url_imagen or ""
 
 
 def descargar_imagenes_ml(item):
@@ -173,7 +146,6 @@ def descargar_imagenes_ml(item):
         url_imagen = (
             picture.get("secure_url")
             or picture.get("url")
-            or picture.get("max_size")
         )
 
         nombre = descargar_imagen_ml(url_imagen)
@@ -378,7 +350,7 @@ class Producto(db.Model):
     origen = db.Column(db.String(100))
     costo_venta = db.Column(db.Float)
     stock = db.Column(db.Integer, default=1)
-    foto = db.Column(db.String(300))
+    foto = db.Column(db.Text)
     link_ml = db.Column(db.String(500))
     estado = db.Column(db.String(50), default="disponible")
 
@@ -1861,6 +1833,17 @@ with app.app_context():
     except Exception as e:
         db.session.rollback()
         print("No se modificó scope o ya estaba actualizado:", e)
+
+    try:
+        db.session.execute(db.text(
+            "ALTER TABLE producto ALTER COLUMN foto TYPE TEXT"
+        ))
+        db.session.commit()
+        print("Columna producto.foto actualizada a TEXT")
+
+    except Exception as e:
+        db.session.rollback()
+        print("No se modificó producto.foto o ya estaba actualizado:", e)
 
     if Usuario.query.count() == 0:
         admin_inicial = Usuario(
