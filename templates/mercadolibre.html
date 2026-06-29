@@ -46,6 +46,7 @@ Mercado Libre
     .ml-info p {
         margin: 8px 0;
         color: #374151;
+        word-break: break-word;
     }
 
     .btn-ml {
@@ -59,10 +60,48 @@ Mercado Libre
         border: none;
         cursor: pointer;
         margin-top: 15px;
+        margin-right: 10px;
     }
 
     .btn-ml:hover {
         background: #d97706;
+        color: white;
+    }
+
+    .btn-sync {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        padding: 13px 22px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        margin-top: 15px;
+        margin-right: 10px;
+    }
+
+    .btn-sync:hover {
+        background: #1d4ed8;
+        color: white;
+    }
+
+    .btn-disconnect {
+        display: inline-block;
+        background: #dc2626;
+        color: white;
+        padding: 13px 22px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        margin-top: 15px;
+    }
+
+    .btn-disconnect:hover {
+        background: #991b1b;
         color: white;
     }
 
@@ -82,6 +121,16 @@ Mercado Libre
         padding: 8px 14px;
         border-radius: 999px;
         font-weight: bold;
+    }
+
+    .ml-warning {
+        margin-top: 15px;
+        background: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fed7aa;
+        padding: 14px 16px;
+        border-radius: 14px;
+        font-size: 14px;
     }
 
     code {
@@ -110,17 +159,35 @@ Mercado Libre
             <p><strong>Fecha conexión:</strong> {{ token.fecha_conexion }}</p>
             <p><strong>Última actualización:</strong> {{ token.fecha_actualizacion }}</p>
         </div>
+
+        <a href="/mercadolibre/sincronizar" class="btn-sync">
+            Sincronizar ahora
+        </a>
+
+        <a href="/mercadolibre/conectar" class="btn-ml">
+            Reconectar / Cambiar cuenta
+        </a>
+
+        <a href="/mercadolibre/desconectar"
+           class="btn-disconnect"
+           onclick="return confirm('¿Seguro que quieres desconectar Mercado Libre? Se eliminarán los tokens guardados y tendrás que conectar la cuenta de nuevo.');">
+            Desconectar Mercado Libre
+        </a>
+
+        <div class="ml-warning">
+            Al desconectar Mercado Libre se elimina la conexión guardada. El inventario ya sincronizado no se borra, pero dejará de actualizarse hasta volver a conectar una cuenta.
+        </div>
     {% else %}
         <span class="estado-desconectado">No conectada</span>
 
         <p style="margin-top: 15px;">
             Todavía no se ha conectado una cuenta de Mercado Libre.
         </p>
-    {% endif %}
 
-    <a href="/mercadolibre/conectar" class="btn-ml">
-        Conectar Mercado Libre
-    </a>
+        <a href="/mercadolibre/conectar" class="btn-ml">
+            Conectar Mercado Libre
+        </a>
+    {% endif %}
 </div>
 
 <div class="ml-card">
