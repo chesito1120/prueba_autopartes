@@ -578,11 +578,26 @@
 
             {% for foto in fotos %}
 
-                <img
-                    class="carousel-img {% if loop.first %}activa{% endif %}"
-                    src="{{ url_for('static', filename='uploads/' ~ foto) }}"
-                    alt="{{ producto.autoparte }}"
-                >
+                {% set foto_limpia = foto.strip() %}
+
+                {% if foto_limpia.startswith('http') %}
+                    <img
+                        class="carousel-img {% if loop.first %}activa{% endif %}"
+                        src="{{ foto_limpia }}"
+                        alt="{{ producto.autoparte }}"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        onerror="this.style.display='none';"
+                    >
+                {% else %}
+                    <img
+                        class="carousel-img {% if loop.first %}activa{% endif %}"
+                        src="{{ url_for('static', filename='uploads/' ~ foto_limpia) }}"
+                        alt="{{ producto.autoparte }}"
+                        loading="lazy"
+                        onerror="this.style.display='none';"
+                    >
+                {% endif %}
 
             {% endfor %}
 
@@ -874,16 +889,22 @@ function moverCarrusel(boton, direccion) {
 </script>
 
 <script>
+/*
+    Desactivamos temporalmente el Service Worker para evitar que el navegador
+    muestre catálogo o imágenes antiguas desde caché.
+    Cuando todo quede estable, se puede volver a registrar.
+*/
 if ('serviceWorker' in navigator) {
 
     navigator.serviceWorker
-    .register('/static/service-worker.js')
+    .getRegistrations()
 
-    .then(() => {
-        console.log("PWA: Service Worker registrado");
+    .then(registrations => {
+        registrations.forEach(registration => registration.unregister());
+        console.log("PWA: Service Worker desactivado temporalmente para evitar caché viejo");
     })
 
-    .catch(err => console.log("Error SW:", err));
+    .catch(err => console.log("Error removiendo SW:", err));
 }
 </script>
 
