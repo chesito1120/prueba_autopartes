@@ -1325,6 +1325,12 @@ def eliminar(id):
     if not session.get("rol") in ["admin", "vendedor"]:
         return redirect("/login")
 
+    MercadoLibreProducto.query.filter_by(producto_id=id).delete()
+
+    Movimiento.query.filter_by(producto_id=id).delete()
+
+    CreditoVenta.query.filter_by(producto_id=id).delete()
+
     producto = Producto.query.get_or_404(id)
 
     db.session.delete(producto)
@@ -1341,6 +1347,28 @@ def eliminar_masivo():
     ids = request.form.getlist("productos")
 
     if ids:
+        # Primero borrar relaciones de Mercado Libre
+        MercadoLibreProducto.query.filter(
+            MercadoLibreProducto.producto_id.in_(ids)
+        ).delete(
+            synchronize_session=False
+        )
+
+        # Después borrar movimientos relacionados
+        Movimiento.query.filter(
+            Movimiento.producto_id.in_(ids)
+        ).delete(
+            synchronize_session=False
+        )
+
+        # Después borrar créditos relacionados
+        CreditoVenta.query.filter(
+            CreditoVenta.producto_id.in_(ids)
+        ).delete(
+            synchronize_session=False
+        )
+
+        # Finalmente borrar productos
         Producto.query.filter(
             Producto.id.in_(ids)
         ).delete(
